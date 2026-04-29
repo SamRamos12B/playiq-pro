@@ -1,7 +1,9 @@
 import streamlit as st
 from auth import require_auth, logout
-from paywall import check_and_handle_payment
-from components.dashboard import render_filters, render_dashboard
+from paywall import check_and_handle_payment, require_pro
+from data.loader import load_data, filter_data
+from components.free_dashboard import render_free_filters, render_free_dashboard
+from components.dashboard import render_filters, render_explorer, render_analytics
 from components.ai_scout import render_ai_scout
 
 st.set_page_config(
@@ -13,7 +15,7 @@ st.set_page_config(
 user = require_auth()
 check_and_handle_payment()
 
-# ── Header ───────────────────────────────────────────────
+# ── Header ────────────────────────────────────────────────
 col1, col2, col3 = st.columns([6, 1, 1])
 with col1:
     st.markdown("## 🏈 PlayIQ Pro")
@@ -26,14 +28,83 @@ with col3:
 
 st.divider()
 
-# ── Filtros en sidebar ───────────────────────────────────
-filtros = render_filters()
+# ── Cargar datos ──────────────────────────────────────────
+df = load_data()
 
-# ── Layout principal ─────────────────────────────────────
-col_dash, col_scout = st.columns([3, 1])
+# ═══════════════════════════════════════════════════════════
+# FREE TIER
+# ═══════════════════════════════════════════════════════════
+if user["plan"] != "pro":
 
-with col_dash:
-    df = render_dashboard(filtros)
+    filtros = render_free_filters(df)
 
-with col_scout:
-    render_ai_scout(filtros, df)
+    filtered_df = filter_data(
+        df,
+        teams         = filtros["teams"],
+        concepts      = [],
+        coverages     = [],
+        formation     = "All",
+        downs         = [],
+        seasons       = filtros["seasons"],
+        weeks         = [],
+        defteam       = "All",
+        def_formation = "All",
+    )
+
+    # Filtro de tipo de jugada (local, no en filter_data)
+    if filtros["tipo_play"] != "All" and "play_type" in filtered_df.columns:
+        filtered_df = filtered_df[
+            filtered_df["play_type"] == filtros["tipo_play"]
+        ]
+
+    # Layout: dashboard + AI Scout lateral
+    col_dash, col_scout = st.columns([3, 1])
+
+    with col_dash:
+        render_free_dashboard(filtered_df)
+
+    with col_scout:
+        render_ai_scout(filtros, filtered_df)
+
+# ═══════════════════════════════════════════════════════════
+# PRO TIER
+# ═══════════════════════════════════════════════════════════
+else:
+
+    filtros = render_filters(df)
+
+    filtered_df = filter_data(
+        df,
+        teams         = filtros["teams"],
+        concepts      = filtros["concepts"],
+        coverages     = filtros["coverages"],
+        formation     = filtros["formation"],
+        downs         = filtros["downs"],
+        seasons       = filtros["seasons"],
+        weeks         = filtros["weeks"],
+        defteam       = filtros["defteam"],
+        def_formation = filtros["def_formation"],
+    )
+
+    active = []
+    if filtros["teams"]:     active.append(f"Team: {', '.join(filtros['teams'])}")
+    if filtros["concepts"]:  active.append(f"Concept: {', '.join(filtros['concepts'])}")
+    if filtros["coverages"]: active.append(f"Coverage: {', '.join(filtros['coverages'])}")
+    if filtros["downs"]:     active.append(f"Down: {filtros['downs']}")
+    if active:
+        st.caption("🔎 Active filters: " + " · ".join(active))
+
+    tab_explorer, tab_analytics, tab_scout = st.tabs([
+        "🔍 Find a Play",
+        "📊 Analytics",
+        "🤖 AI Scout",
+    ])
+
+    with tab_explorer:
+        render_explorer(filtered_df, df)
+
+    with tab_analytics:
+        render_analytics(filtered_df)
+
+    with tab_scout:
+        render_ai_scout(filtros, filtered_df)
