@@ -4,7 +4,6 @@ from paywall import check_and_handle_payment, require_pro
 from data.loader import load_data, filter_data
 from components.free_dashboard import render_free_filters, render_free_dashboard
 from components.dashboard import render_filters, render_explorer, render_analytics
-from components.ai_scout import render_ai_scout
 
 st.set_page_config(
     page_title="PlayIQ Pro",
@@ -94,17 +93,13 @@ else:
     if active:
         st.caption("🔎 Active filters: " + " · ".join(active))
 
-    tab_explorer, tab_analytics, tab_scout = st.tabs([
+    tab_explorer, tab_analytics = st.tabs([
         "🔍 Find a Play",
         "📊 Analytics",
-        "🤖 AI Scout",
-    ])
-
+        ])
+    
     with tab_explorer:
         render_explorer(filtered_df, df)
-
+        
     with tab_analytics:
         render_analytics(filtered_df)
-
-    with tab_scout:
-        render_ai_scout(filtros, filtered_df)

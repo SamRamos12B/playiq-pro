@@ -8,6 +8,7 @@ from models.analytics_engine import (
     third_down_analysis, formation_vs_formation
 )
 from models.play_diagram_engine import draw_play
+from components.ai_scout import render_ai_scout
 
 # ── Constantes ───────────────────────────────────────────────────────────────
 DOWN_SUFFIX = {1: "st", 2: "nd", 3: "rd", 4: "th"}
@@ -195,141 +196,329 @@ def render_filters(df: pd.DataFrame) -> dict:
 
 
 # ── Tab 1 — Find a Play ───────────────────────────────────────────────────────
-def render_explorer(filtered_df: pd.DataFrame, full_df: pd.DataFrame):
+def render_explorer(filtered_df, full_df):
     if filtered_df.empty:
         st.warning("No plays match the current filters.")
         return
 
-    list_col, detail_col = st.columns([1, 3])
-
-    with list_col:
+    sort_col_ui, _ = st.columns([2, 8])
+    with sort_col_ui:
         sort_choice = st.selectbox(
-            "↕ Sort", [f"↕ {k}" for k in SORT_OPTIONS],
-            label_visibility="collapsed", key="sel_sort")
-        sort_key = sort_choice.replace("↕ ", "")
-        sort_col, sort_asc = SORT_OPTIONS[sort_key]
-        results = filtered_df.sort_values(sort_col, ascending=sort_asc,
-                                          na_position="last").head(20)
+            "Sort", list(SORT_OPTIONS.keys()),
+            label_visibility="collapsed", key="sel_sort"
+        )
+    sort_col, sort_asc = SORT_OPTIONS[sort_choice]
+    results = filtered_df.sort_values(
+        sort_col, ascending=sort_asc, na_position="last"
+    ).head(20).reset_index(drop=True)
 
-        sel_idx = st.session_state.get("selected_play_idx", 0)
-        if sel_idx >= len(results):
-            sel_idx = 0
-            st.session_state["selected_play_idx"] = 0
+    if "selected_play_idx" not in st.session_state:
+        st.session_state["selected_play_idx"] = 0
+    sel_idx = min(st.session_state["selected_play_idx"], len(results) - 1)
+    selected = results.iloc[sel_idx]
 
-        for i, (_, row) in enumerate(results.iterrows()):
-            label = play_label(i, row)
-            if st.button(label, key=f"play_{i}", use_container_width=True):
-                st.session_state["selected_play_idx"] = i
-                st.rerun()
+    col_list, col_detail, col_right = st.columns([2, 3, 3])
 
-    with detail_col:
-        if results.empty:
-            return
+    st.markdown("""
+<style>
+div[data-testid="stVerticalBlock"] div.stButton > button {
+    background: transparent;
+    border: none;
+    border-bottom: 0.5px solid var(--color-border-tertiary);
+    border-radius: 0;
+    padding: 10px 4px;
+    text-align: left;
+    width: 100%;
+}
+div[data-testid="stVerticalBlock"] div.stButton > button:hover {
+    background: var(--color-background-secondary);
+    border-color: var(--color-border-tertiary);
+}
+</style>
+""", unsafe_allow_html=True)
+    
+    st.markdown("""
+<style>
+div[data-testid="stVerticalBlock"] div.stButton > button {
+    height: 28px !important;
+    min-height: 28px !important;
+    padding: 0 8px !important;
+    border: 0.5px solid var(--color-border-tertiary) !important;
+    background: transparent !important;
+    box-shadow: none !important;
+    font-size: 11px !important;
+    color: var(--color-text-tertiary) !important;
+    border-radius: 6px !important;
+    width: auto !important;
+    white-space: nowrap !important;
+}
+div[data-testid="stVerticalBlock"] div.stButton > button:hover {
+    background: var(--color-background-secondary) !important;
+    border-color: var(--color-border-secondary) !important;
+}
+div[data-testid="stVerticalBlock"] div.stButton {
+    margin: 0 !important;
+    padding: 0 !important;
+}
+</style>
+""", unsafe_allow_html=True)
 
-        selected_play = results.iloc[sel_idx]
-        col_card, col_diagram = st.columns([1, 1])
+    with col_list:
+        st.caption(f"{len(results)} plays")
+        with st.container(height=720):
+            for i, row in results.iterrows():
+                try:
+                    dn = int(row["down"]); ydt = int(row["ydstogo"])
+                    down_str_item = f"{dn}{DOWN_SUFFIX.get(dn,'th')}&{ydt}"
+                except:
+                    down_str_item = "—"
+                yards    = row.get("yards_gained")
+                epa      = row.get("epa")
+                team     = row.get("posteam", "?")
+                concept  = row.get("concept", "?")
+                yards_str = f"{int(yards)} yds" if pd.notna(yards) else "—"
+                epa_str   = f"{epa:+.2f}" if pd.notna(epa) else "—"
+                epa_color = "#3B6D11" if pd.notna(epa) and epa >= 0 else "#A32D2D"
+                is_active = sel_idx == i
+                active_style = "border-left:2px solid #378ADD;" if is_active else "border-left:2px solid transparent;"
 
-        with col_card:
-            concept_val  = selected_play.get("concept", "—")
-            formation_val = selected_play.get("formation_label", "—")
-            coverage_val = selected_play.get("coverage", "—")
-            yards_val    = selected_play.get("yards_gained")
-            epa_val      = selected_play.get("epa")
-            down_val     = selected_play.get("down")
-            ydstogo_val  = selected_play.get("ydstogo")
+                col_text, col_btn = st.columns([1.5, 1])
+                with col_text:
+                    st.markdown(f"""
+        <div style="padding:8px 4px;{active_style}">
+        <div style="display:flex;align-items:baseline;gap:6px;margin-bottom:3px;">
+            <span style="font-size:11px;color:var(--color-text-tertiary);min-width:18px;">{i+1}.</span>
+            <span style="font-size:13px;font-weight:500;color:var(--color-text-primary);">{team}</span>
+            <span style="font-size:13px;color:#378ADD;">{concept}</span>
+        </div>
+        <div style="display:flex;gap:6px;padding-left:24px;">
+            <span style="font-size:12px;color:var(--color-text-secondary);">{down_str_item}</span>
+            <span style="font-size:12px;color:var(--color-text-tertiary);">·</span>
+            <span style="font-size:12px;color:var(--color-text-secondary);">{yards_str}</span>
+            <span style="font-size:12px;color:var(--color-text-tertiary);">·</span>
+            <span style="font-size:12px;font-weight:500;color:{epa_color};">{epa_str}</span>
+        </div>
+        </div>
+        """, unsafe_allow_html=True)
+                with col_btn:
+                    st.markdown("<div style='height:14px'></div>", unsafe_allow_html=True)
+                    if st.button("Select this play", key=f"play_{i}"):
+                        st.session_state["selected_play_idx"] = i
+                        st.rerun()
 
-            yards_str = f"{int(yards_val)}" if pd.notna(yards_val) else "—"
-            epa_str   = f"{epa_val:+.2f}" if pd.notna(epa_val) else "—"
+    with col_detail:
+        concept_val    = selected.get("concept", "—")
+        formation_val  = selected.get("formation_label", "—")
+        coverage_val   = selected.get("coverage", "—")
+        yards_val      = selected.get("yards_gained")
+        epa_val        = selected.get("epa")
+        down_val       = selected.get("down")
+        ydstogo_val    = selected.get("ydstogo")
 
-            try:
-                down_int = int(down_val)
-                ydt_int  = int(ydstogo_val)
-                down_str = f"{down_int}{DOWN_SUFFIX.get(down_int,'th')} & {ydt_int}"
-            except (TypeError, ValueError):
-                down_str = "—"
+        try:
+            dn = int(down_val); ydt = int(ydstogo_val)
+            down_str = f"{dn}{DOWN_SUFFIX.get(dn,'th')} & {ydt}"
+        except:
+            down_str = "—"
 
-            concept_color  = CONCEPT_COLORS.get(concept_val, "#6B7280")
-            coverage_color = COVERAGE_COLORS.get(coverage_val, "#6B7280")
-            formation_color = FORMATION_COLORS.get(formation_val, "#6B7280")
+        concept_color   = CONCEPT_COLORS.get(concept_val, "#6B7280")
+        coverage_color  = COVERAGE_COLORS.get(coverage_val, "#6B7280")
+        formation_color = FORMATION_COLORS.get(formation_val, "#6B7280")
 
-            # Play card
-            st.markdown(f"""
-<div style="background:var(--color-background-secondary);
-            border-radius:12px; padding:16px 20px; margin-bottom:12px;
-            border:0.5px solid var(--color-border-tertiary)">
-  <p style="font-size:11px; color:var(--color-text-secondary);
-            text-transform:uppercase; margin:0 0 8px">{down_str}</p>
-  <div style="margin-bottom:12px">
-    <p style="font-size:11px; color:var(--color-text-secondary);
-              text-transform:uppercase; letter-spacing:0.06em; margin:0 0 4px">Concept</p>
-    <span style="padding:4px 12px; border-radius:20px; font-size:13px; font-weight:500;
-                 background:{concept_color}22; color:{concept_color};
-                 border:1px solid {concept_color}55">{concept_val}</span>
-  </div>
-  <div style="margin-bottom:12px">
-    <p style="font-size:11px; color:var(--color-text-secondary);
-              text-transform:uppercase; letter-spacing:0.06em; margin:0 0 4px">Formation</p>
-    <span style="padding:4px 12px; border-radius:20px; font-size:13px; font-weight:500;
-                 background:{formation_color}22; color:{formation_color};
-                 border:1px solid {formation_color}55">{formation_val}</span>
-  </div>
-  <div>
-    <p style="font-size:11px; color:var(--color-text-secondary);
-              text-transform:uppercase; letter-spacing:0.06em; margin:0 0 4px">Coverage</p>
-    <span style="padding:4px 12px; border-radius:20px; font-size:13px; font-weight:500;
-                 background:{coverage_color}22; color:{coverage_color};
-                 border:1px solid {coverage_color}55">{coverage_val}</span>
+        # ── Badges ───────────────────────────────────────
+        st.markdown(f"""
+<div style="margin-bottom:14px;">
+  <div style="font-size:32px;font-weight:500;color:var(--color-text-primary);
+              margin-bottom:14px;">{down_str}</div>
+  <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;">
+    <div style="background:{concept_color}22;border:1px solid {concept_color}55;
+                border-radius:10px;padding:10px 12px;">
+      <p style="font-size:10px;color:{concept_color};text-transform:uppercase;
+                letter-spacing:.06em;margin:0 0 4px;opacity:0.8">Concept</p>
+      <p style="font-size:14px;font-weight:500;color:{concept_color};margin:0;">
+        {concept_val}</p>
+    </div>
+    <div style="background:{formation_color}22;border:1px solid {formation_color}55;
+                border-radius:10px;padding:10px 12px;">
+      <p style="font-size:10px;color:{formation_color};text-transform:uppercase;
+                letter-spacing:.06em;margin:0 0 4px;opacity:0.8">Formation</p>
+      <p style="font-size:14px;font-weight:500;color:{formation_color};margin:0;">
+        {formation_val}</p>
+    </div>
+    <div style="background:{coverage_color}22;border:1px solid {coverage_color}55;
+                border-radius:10px;padding:10px 12px;">
+      <p style="font-size:10px;color:{coverage_color};text-transform:uppercase;
+                letter-spacing:.06em;margin:0 0 4px;opacity:0.8">Coverage</p>
+      <p style="font-size:14px;font-weight:500;color:{coverage_color};margin:0;">
+        {coverage_val}</p>
+    </div>
   </div>
 </div>
 """, unsafe_allow_html=True)
 
-            # Métricas
-            m1, m2, m3 = st.columns(3)
-            m1.metric("Yards", yards_str)
-            m2.metric("EPA", epa_str)
-            try:
-                first_down = int(yards_val) >= int(ydstogo_val)
-                m3.metric("1st Down", "✅" if first_down else "❌")
-            except (TypeError, ValueError):
-                m3.metric("1st Down", "—")
+        st.divider()
 
-            # Similar plays
-            similar = find_similar_plays(selected_play, filtered_df)
-            if not similar.empty:
-                st.markdown("**Similar plays**")
-                sim_cols = st.columns(len(similar))
-                for col, (_, row) in zip(sim_cols, similar.iterrows()):
-                    _epa = row.get("epa")
-                    _yds = row.get("yards_gained")
-                    _dn  = int(row.get("down", 1))
-                    _suf = DOWN_SUFFIX.get(_dn, "th")
-                    _ydt = int(row.get("ydstogo", 0))
-                    _color = "#10B981" if pd.notna(_epa) and _epa > 0 else "#EF4444"
-                    with col:
-                        st.markdown(
-                            f"<div style='background:var(--color-background-secondary);"
-                            f"border-radius:10px;border:0.5px solid var(--color-border-tertiary);"
-                            f"padding:10px 12px'>"
-                            f"<div style='font-size:12px;font-weight:500'>{row.get('concept','—')}</div>"
-                            f"<div style='font-size:11px;color:var(--color-text-secondary)'>"
-                            f"{_dn}{_suf} & {_ydt} · {row.get('coverage','—')}</div>"
-                            f"<div style='font-size:13px;font-weight:500;color:{_color}'>"
-                            f"{int(_yds) if pd.notna(_yds) else '—'} yds · {_epa:+.2f} EPA</div>"
-                            f"</div>",
-                            unsafe_allow_html=True
-                        )
-                        if st.button("View", key=f"sim_{row.name}", use_container_width=True):
-                            target = results.index.get_loc(row.name) if row.name in results.index else 0
-                            st.session_state["selected_play_idx"] = target
-                            st.rerun()
+        # ── Métricas grandes ─────────────────────────────
+        st.markdown("<p style='font-size:13px;color:gray;text-transform:uppercase;letter-spacing:.08em;margin-bottom:6px'>RESULT</p>", unsafe_allow_html=True)
+        yards_str = f"{int(yards_val)}" if pd.notna(yards_val) else "—"
+        epa_str   = f"{epa_val:+.2f}" if pd.notna(epa_val) else "—"
+        try:
+            first_down = int(yards_val) >= int(ydstogo_val)
+            fd_str = "✓ Yes" if first_down else "✗ No"
+            fd_color = "color:#3B6D11" if first_down else "color:#A32D2D"
+        except:
+            fd_str = "—"; fd_color = ""
 
-        with col_diagram:
-            st.caption(f"📐 {concept_val} · {formation_val}")
-            fig = draw_play(selected_play)
-            st.plotly_chart(fig, use_container_width=True)
+        epa_color = "color:#3B6D11" if pd.notna(epa_val) and epa_val >= 0 else "color:#A32D2D"
 
+        st.markdown(f"""
+<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:4px;">
+  <div style="background:var(--color-background-primary);border:0.5px solid var(--color-border-tertiary);
+              border-radius:8px;padding:14px 12px;text-align:center;">
+    <div style="font-size:10px;color:gray;text-transform:uppercase;
+                letter-spacing:.06em;margin-bottom:6px;">Yards</div>
+    <div style="font-size:28px;font-weight:500;">{yards_str}</div>
+  </div>
+  <div style="background:var(--color-background-primary);border:0.5px solid var(--color-border-tertiary);
+              border-radius:8px;padding:14px 12px;text-align:center;">
+    <div style="font-size:10px;color:gray;text-transform:uppercase;
+                letter-spacing:.06em;margin-bottom:6px;">EPA</div>
+    <div style="font-size:28px;font-weight:500;{epa_color}">{epa_str}</div>
+  </div>
+  <div style="background:var(--color-background-primary);border:0.5px solid var(--color-border-tertiary);
+              border-radius:8px;padding:14px 12px;text-align:center;">
+    <div style="font-size:10px;color:gray;text-transform:uppercase;
+                letter-spacing:.06em;margin-bottom:6px;">1st Down</div>
+    <div style="font-size:20px;font-weight:500;{fd_color}">{fd_str}</div>
+  </div>
+</div>
+""", unsafe_allow_html=True)
 
-# ── Tab 2 — Analytics ─────────────────────────────────────────────────────────
+        st.divider()
+
+        # ── Concept vs Coverage bars ──────────────────────
+        st.markdown("<p style='font-size:13px;color:gray;text-transform:uppercase;letter-spacing:.08em;margin-bottom:6px'>CONCEPT VS COVERAGE</p>", unsafe_allow_html=True)
+        cvs = concept_vs_coverage(filtered_df)
+        if not cvs.empty and concept_val in cvs["concept"].values:
+            concept_cvs = (
+                cvs[cvs["concept"] == concept_val]
+                .sort_values("avg_epa", ascending=False)
+                .head(5)
+            )
+            max_epa = concept_cvs["avg_epa"].abs().max() or 1
+            bars_html = ""
+            for _, row in concept_cvs.iterrows():
+                pct   = min(abs(row["avg_epa"]) / max_epa * 100, 100)
+                color = "#3B6D11" if row["avg_epa"] >= 0 else "#A32D2D"
+                cov   = row["coverage"]
+                active = "border:1px solid #378ADD;" if row["coverage"] == coverage_val else ""
+                bars_html += f"""
+<div style="display:flex;align-items:center;gap:8px;margin-bottom:7px;">
+  <span style="font-size:15px;color:var(--color-text-secondary);
+               width:130px;flex-shrink:0;{active}">{cov}</span>
+  <div style="flex:1;height:6px;background:var(--color-border-tertiary);
+              border-radius:3px;overflow:hidden;">
+    <div style="width:{pct:.0f}%;height:100%;background:{color};border-radius:3px;"></div>
+  </div>
+  <span style="font-size:15px;color:var(--color-text-secondary);
+               width:42px;text-align:right;">{row['avg_epa']:+.2f}</span>
+</div>"""
+            st.markdown(f"""
+<div style="background:var(--color-background-primary);
+            border:0.5px solid var(--color-border-tertiary);
+            border-radius:8px;padding:12px 14px;">
+  {bars_html}
+</div>
+""", unsafe_allow_html=True)
+        else:
+            st.caption("Not enough data")
+
+        st.divider()
+
+        # ── Context ───────────────────────────────────────
+        st.markdown("<p style='font-size:13px;color:gray;text-transform:uppercase;letter-spacing:.08em;margin-bottom:6px'>CONTEXT</p>", unsafe_allow_html=True)
+        perf = concept_performance(filtered_df)
+        if not perf.empty and concept_val in perf.index:
+            c_avg_epa     = perf.loc[concept_val, "avg_epa"]
+            c_success     = perf.loc[concept_val, "success_rate"]
+            c_plays       = int(perf.loc[concept_val, "plays"])
+            deviation     = (epa_val - c_avg_epa) if pd.notna(epa_val) else None
+            dev_str       = f"{deviation:+.2f} above avg" if deviation and deviation >= 0 else f"{deviation:.2f} below avg" if deviation else "—"
+            dev_color     = "#3B6D11" if deviation and deviation >= 0 else "#A32D2D"
+            avg_color     = "#3B6D11" if c_avg_epa >= 0 else "#A32D2D"
+
+            st.markdown(f"""
+<div style="background:var(--color-background-primary);
+            border:0.5px solid var(--color-border-tertiary);
+            border-radius:8px;padding:12px 14px;">
+  <div style="display:flex;justify-content:space-between;
+              padding:6px 0;border-bottom:0.5px solid var(--color-border-tertiary);">
+    <span style="font-size:15px;color:gray;">Concept avg EPA</span>
+    <span style="font-size:18px;font-weight:500;color:{avg_color};">{c_avg_epa:+.3f}</span>
+  </div>
+  <div style="display:flex;justify-content:space-between;
+              padding:6px 0;border-bottom:0.5px solid var(--color-border-tertiary);">
+    <span style="font-size:15px;color:gray;">This play vs avg</span>
+    <span style="font-size:18px;font-weight:500;color:{dev_color};">{dev_str}</span>
+  </div>
+  <div style="display:flex;justify-content:space-between;
+              padding:6px 0;border-bottom:0.5px solid var(--color-border-tertiary);">
+    <span style="font-size:15px;color:gray;">Success rate</span>
+    <span style="font-size:18px;font-weight:500;">{c_success:.1%}</span>
+  </div>
+  <div style="display:flex;justify-content:space-between;padding:6px 0;">
+    <span style="font-size:15px;color:gray;">Plays in dataset</span>
+    <span style="font-size:18px;font-weight:500;">{c_plays:,}</span>
+  </div>
+</div>
+""", unsafe_allow_html=True)
+        else:
+            st.caption("Not enough data")
+
+    with col_right:
+        st.caption(f"📐 {concept_val} · {formation_val}")
+        fig = draw_play(selected)
+        st.plotly_chart(fig, use_container_width=True,
+                        config={"displayModeBar": False})
+        st.divider()
+        render_ai_scout(
+            {"concept": concept_val, "coverage": coverage_val,
+             "formation": formation_val, "down": down_val},
+            filtered_df
+        )
+
+    similar = find_similar_plays(selected, filtered_df)
+    if not similar.empty:
+        st.divider()
+        st.markdown("<p style='font-size:13px;color:gray;text-transform:uppercase;letter-spacing:.08em;margin-bottom:8px'>Similar plays</p>", unsafe_allow_html=True)
+        sim_cols = st.columns(len(similar))
+        for col, (_, row) in zip(sim_cols, similar.iterrows()):
+            _epa   = row.get("epa")
+            _yds   = row.get("yards_gained")
+            _dn    = int(row.get("down", 1))
+            _suf   = DOWN_SUFFIX.get(_dn, "th")
+            _ydt   = int(row.get("ydstogo", 0))
+            _color = "#10B981" if pd.notna(_epa) and _epa > 0 else "#EF4444"
+            with col:
+                st.markdown(
+                    f"<div style='background:var(--color-background-secondary);"
+                    f"border-radius:10px;border:0.5px solid var(--color-border-tertiary);"
+                    f"padding:14px 16px'>"
+                    f"<div style='font-size:15px;font-weight:500;margin-bottom:4px'>{row.get('concept','—')}</div>"
+                    f"<div style='font-size:13px;color:gray;margin-bottom:6px'>"
+                    f"{row.get('posteam','?')} · {_dn}{_suf}&{_ydt} · {row.get('coverage','—')}</div>"
+                    f"<div style='font-size:16px;font-weight:500;color:{_color}'>"
+                    f"{int(_yds) if pd.notna(_yds) else '—'} yds · "
+                    f"{_epa:+.2f} EPA</div></div>",
+                    unsafe_allow_html=True
+                )
+                if st.button("View", key=f"sim_{row.name}",
+                             use_container_width=True):
+                    match = results[results.index == row.name]
+                    if not match.empty:
+                        st.session_state["selected_play_idx"] = match.index[0]
+                    st.rerun()
+
 def render_analytics(filtered_df: pd.DataFrame):
     total        = len(filtered_df)
     avg_epa      = filtered_df["epa"].mean()       if total else 0.0
