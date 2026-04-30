@@ -102,4 +102,4 @@ else:
         render_explorer(filtered_df, df)
         
     with tab_analytics:
-        render_analytics(filtered_df)
+        render_analytics(filtered_df, df)

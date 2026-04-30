@@ -598,97 +598,70 @@ def render_analytics(filtered_df: pd.DataFrame, full_df: pd.DataFrame = None):
 
     st.divider()
 
-    # ── Concept Performance ─────────────────────────────
-    st.markdown("### 📈 Concept Performance")
-    st.caption("¿Qué conceptos están subiendo y cuáles perdiendo efectividad?")
+    # Concept performance + trend
+    st.subheader("Concept performance")
+    win_col, _ = st.columns([1, 4])
+    with win_col:
+        trend_window = st.selectbox(
+            "Trend window", [4, 8, "Full season"], index=1,
+            key="trend_window",
+            format_func=lambda x: f"Trend: last {x} wks" if x != "Full season" else "Trend: full season",
+            label_visibility="collapsed")
+    w = int(filtered_df["week"].max()) if trend_window == "Full season" else int(trend_window)
 
     perf = concept_performance(filtered_df)
-    if perf.empty:
-        st.info("Not enough data for the current filters.")
-    else:
-        win_col, _ = st.columns([2, 6])
-        with win_col:
-            trend_window = st.selectbox(
-                "Trend window", [4, 8, "Full season"], index=1,
-                key="trend_window",
-                format_func=lambda x: f"Últimas {x} semanas" if x != "Full season" else "Temporada completa",
-                label_visibility="collapsed"
-            )
-        w = int(filtered_df["week"].max()) if trend_window == "Full season" else int(trend_window)
+    if not perf.empty:
         perf_reset = perf.reset_index() if "concept" not in perf.columns else perf.copy()
         perf_trend = add_trend_column(perf_reset, filtered_df, w)
+        bar_df     = perf_trend.copy()
+        if "concept" not in bar_df.columns:
+            bar_df = bar_df.reset_index()
+        bar_df = bar_df.sort_values("avg_epa", ascending=True).tail(10)
 
-        card_cols = st.columns(3)
-        for i, (_, row) in enumerate(perf_trend.iterrows()):
-            concept_name = row.get("concept", row.name if hasattr(row, "name") else "")
-            epa_val      = row.get("avg_epa", 0)
-            yards_val    = row.get("avg_yards", 0)
-            success_val  = row.get("success_rate", 0)
-            plays_val    = int(row.get("plays", 0))
-            delta_val    = row.get("trend_delta", 0)
-            badge        = row.get("trend_badge", "→ Stable")
-            spark        = row.get("spark", [])
+        fig_bar = px.bar(
+            bar_df, x="avg_epa", y="concept", orientation="h",
+            color="avg_epa", color_continuous_scale="RdYlGn",
+            height=280, template="plotly_white")
+        fig_bar.update_layout(
+            margin=dict(t=8,b=8,l=8,r=8), coloraxis_showscale=False,
+            xaxis_title="", yaxis_title="",
+            paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)")
+        st.plotly_chart(fig_bar, use_container_width=True, config={"displayModeBar": False})
 
-            trend        = "hot" if delta_val > 0.10 else "cool" if delta_val < -0.10 else "stable"
-            border_color = "#F59E0B" if trend == "hot" else "#60A5FA" if trend == "cool" else "var(--color-border-tertiary)"
-            badge_style  = "background:#FEF3CD;color:#92610A;border:1px solid #F5CC6A;" if trend == "hot" else                            "background:#EFF6FF;color:#1D4ED8;border:1px solid #93C5FD;" if trend == "cool" else                            "background:var(--color-background-primary);color:var(--color-text-tertiary);border:0.5px solid var(--color-border-tertiary);"
-            epa_color    = "#3B6D11" if epa_val >= 0 else "#A32D2D"
-            insight      = f"Ganando +{delta_val:.2f} EPA vs semanas anteriores" if trend == "hot" else                            f"Perdiendo {abs(delta_val):.2f} EPA vs semanas anteriores" if trend == "cool" else                            "Sin cambio significativo en tendencia reciente"
+        display_cols = [c for c in perf_trend.columns if c not in ("spark","trend_delta")]
+        st.dataframe(
+            style_table(perf_trend[display_cols], pct_cols=["success_rate"], epa_cols=["avg_epa"]),
+            use_container_width=True)
 
-            spark_svg = ""
-            if len(spark) >= 2:
-                svg_w, svg_h = 200, 40
-                mn, mx = min(spark), max(spark)
-                rng = mx - mn or 1
-                pts = " ".join([
-                    f"{int((j/(len(spark)-1))*svg_w)},{int(svg_h - ((v-mn)/rng)*(svg_h-6) - 3)}"
-                    for j, v in enumerate(spark)
-                ])
-                spark_color = "#F59E0B" if trend == "hot" else "#60A5FA" if trend == "cool" else "#9CA3AF"
-                spark_svg = f'''
-<svg viewBox="0 0 {svg_w} {svg_h}" xmlns="http://www.w3.org/2000/svg"
-     style="width:100%;height:40px;display:block;margin-top:8px;">
-  <polyline points="{pts}" fill="none" stroke="{spark_color}" stroke-width="2"
-            stroke-linecap="round" stroke-linejoin="round"/>
-</svg>'''
-
-            with card_cols[i % 3]:
-                st.markdown(f"""
-<div style="background:var(--color-background-secondary);
-            border:0.5px solid var(--color-border-tertiary);
-            border-left:3px solid {border_color};
-            border-radius:10px;padding:14px 16px;margin-bottom:10px;">
-  <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px;">
-    <span style="font-size:14px;font-weight:500;color:var(--color-text-primary);">{concept_name}</span>
-    <span style="font-size:11px;padding:2px 8px;border-radius:20px;{badge_style}">{badge}</span>
-  </div>
-  <div style="display:flex;align-items:baseline;gap:6px;margin-bottom:6px;">
-    <span style="font-size:22px;font-weight:500;color:{epa_color};">{epa_val:+.3f}</span>
-    <span style="font-size:11px;color:var(--color-text-tertiary);">avg EPA</span>
-  </div>
-  <div style="display:flex;gap:14px;margin-bottom:4px;">
-    <div>
-      <div style="font-size:10px;color:gray;text-transform:uppercase;letter-spacing:.06em;">Plays</div>
-      <div style="font-size:12px;font-weight:500;">{plays_val:,}</div>
-    </div>
-    <div>
-      <div style="font-size:10px;color:gray;text-transform:uppercase;letter-spacing:.06em;">Yards</div>
-      <div style="font-size:12px;font-weight:500;">{yards_val:.1f}</div>
-    </div>
-    <div>
-      <div style="font-size:10px;color:gray;text-transform:uppercase;letter-spacing:.06em;">Success</div>
-      <div style="font-size:12px;font-weight:500;">{success_val:.1%}</div>
-    </div>
-  </div>
-  {spark_svg}
-  <div style="font-size:11px;color:var(--color-text-tertiary);margin-top:6px;font-style:italic;">{insight}</div>
-</div>
-""", unsafe_allow_html=True)
-
-    st.divider()
+        with st.expander("📈 Weekly sparklines", expanded=False):
+            spark_cols = st.columns(3)
+            for i, (_, row) in enumerate(perf_trend.iterrows()):
+                spark = row.get("spark", [])
+                if len(spark) < 2:
+                    continue
+                with spark_cols[i % 3]:
+                    delta_val = row.get("trend_delta", 0)
+                    color     = ("#10B981" if delta_val > 0.10
+                                 else "#EF4444" if delta_val < -0.10 else "#9CA3AF")
+                    fig_sp = go.Figure(go.Scatter(
+                        y=spark, mode="lines+markers",
+                        line=dict(color=color, width=2),
+                        marker=dict(size=5, color=color)))
+                    fig_sp.update_layout(
+                        height=100, margin=dict(t=4,b=4,l=4,r=4),
+                        paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
+                        xaxis=dict(showgrid=False, showticklabels=False, zeroline=False),
+                        yaxis=dict(showgrid=False, showticklabels=False, zeroline=True,
+                                   zerolinecolor="#E5E7EB", zerolinewidth=1),
+                        showlegend=False)
+                    concept_name = row.get("concept", row.name if hasattr(row,"name") else "")
+                    badge = row.get("trend_badge","")
+                    st.caption(f"**{concept_name}** · {badge} · {delta_val:+.2f}")
+                    st.plotly_chart(fig_sp, use_container_width=True, config={"displayModeBar": False})
+    else:
+        st.info("Not enough data for the current filters.")
 
     # Concept vs Coverage + Third Down
-
     col_left, col_right = st.columns(2)
     with col_left:
         st.subheader("Concept vs Coverage")
