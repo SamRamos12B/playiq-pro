@@ -687,49 +687,213 @@ def render_analytics(filtered_df: pd.DataFrame, full_df: pd.DataFrame = None):
 
     st.divider()
 
-    # Concept vs Coverage + Third Down
+    # ── Concept vs Coverage ───────────────────────────────────────────────────
+    st.markdown("### 🎯 Concept vs Coverage")
+    st.caption("¿Qué combinación es más y menos efectiva?")
 
-    col_left, col_right = st.columns(2)
-    with col_left:
-        st.subheader("Concept vs Coverage")
-        cvs = concept_vs_coverage(filtered_df).head(20)
-        if not cvs.empty:
-            st.dataframe(
-                style_table(cvs, pct_cols=["success_rate"], epa_cols=["avg_epa"]),
-                use_container_width=True)
-            top_concepts  = filtered_df.groupby("concept")["epa"].count().nlargest(8).index.tolist()
-            top_coverages = filtered_df.groupby("coverage")["epa"].count().nlargest(6).index.tolist()
-            heat_df = (
-                filtered_df[
-                    filtered_df["concept"].isin(top_concepts) &
-                    filtered_df["coverage"].isin(top_coverages)
-                ]
-                .groupby(["concept","coverage"])["epa"].mean()
-                .unstack(fill_value=0)
-                .reindex(index=top_concepts, columns=top_coverages, fill_value=0)
+    cvs = concept_vs_coverage(filtered_df)
+    if not cvs.empty:
+        best_row  = cvs.loc[cvs["avg_epa"].idxmax()]
+        worst_row = cvs.loc[cvs["avg_epa"].idxmin()]
+        cov_avg   = cvs.groupby("coverage")["avg_epa"].mean()
+        top_cov      = cov_avg.idxmax()
+        top_cov_epa  = cov_avg.max()
+
+        best_epa_color    = "#3B6D11" if best_row["avg_epa"] >= 0 else "#A32D2D"
+        worst_epa_color   = "#3B6D11" if worst_row["avg_epa"] >= 0 else "#A32D2D"
+        top_cov_epa_color = "#3B6D11" if top_cov_epa >= 0 else "#A32D2D"
+
+        st.markdown(f"""
+<div style="background:var(--color-background-secondary);
+            border:0.5px solid var(--color-border-tertiary);
+            border-radius:10px;padding:14px 18px;margin-bottom:16px;">
+  <p style="font-size:10px;color:gray;text-transform:uppercase;
+            letter-spacing:.08em;margin-bottom:6px;">Insight</p>
+  <p style="font-size:16px;color:var(--color-text-primary);line-height:1.6;margin:0;">
+    El matchup más efectivo es
+    <span style="color:#378ADD;font-weight:500;">{best_row['concept']}</span>
+    vs <span style="color:#378ADD;font-weight:500;">{best_row['coverage']}</span>
+    con un EPA promedio de
+    <span style="color:{best_epa_color};font-weight:500;">{best_row['avg_epa']:+.3f}</span>.<br><br>
+    El menos efectivo es
+    <span style="color:#378ADD;font-weight:500;">{worst_row['concept']}</span>
+    vs <span style="color:#378ADD;font-weight:500;">{worst_row['coverage']}</span>
+    (<span style="color:{worst_epa_color};font-weight:500;">{worst_row['avg_epa']:+.3f}</span>).
+    La cobertura que concede más EPA en promedio es
+    <span style="color:#378ADD;font-weight:500;">{top_cov}</span>
+    (<span style="color:{top_cov_epa_color};font-weight:500;">{top_cov_epa:+.3f}</span>).
+  </p>
+</div>
+""", unsafe_allow_html=True)
+
+        cvc_left, cvc_right = st.columns(2)
+
+        with cvc_left:
+            raw_pivot = (
+                filtered_df.groupby(["concept", "coverage"])["epa"].mean()
+                .unstack()
             )
+            concept_order = (
+                filtered_df.groupby("concept")["epa"].mean()
+                .sort_values(ascending=False)
+                .index.tolist()
+            )
+            concept_order = [c for c in concept_order if c in raw_pivot.index]
+            coverage_order = raw_pivot.columns.tolist()
+            heat_df = raw_pivot.reindex(index=concept_order, columns=coverage_order)
+            cell_text = [
+                ["—" if pd.isna(v) else f"{v:+.2f}" for v in row]
+                for row in heat_df.values
+            ]
             fig_heat = go.Figure(go.Heatmap(
-                z=heat_df.values, x=heat_df.columns.tolist(), y=heat_df.index.tolist(),
+                z=heat_df.values,
+                x=heat_df.columns.tolist(),
+                y=heat_df.index.tolist(),
+                text=cell_text,
+                texttemplate="%{text}",
+                textfont={"size": 10, "color": "white"},
                 colorscale="RdYlGn",
                 hovertemplate="%{y} vs %{x}<br>Avg EPA: %{z:.3f}<extra></extra>",
                 colorbar=dict(title="Avg EPA", thickness=12, len=0.8)))
             fig_heat.update_layout(
-                height=320, margin=dict(t=8,b=8,l=8,r=8),
+                height=400, margin=dict(t=8, b=8, l=8, r=8),
                 paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
                 xaxis_title="", yaxis_title="")
             st.plotly_chart(fig_heat, use_container_width=True, config={"displayModeBar": False})
-        else:
-            st.info("Not enough data.")
 
-    with col_right:
-        st.subheader("Third Down Analysis")
-        tda = third_down_analysis(filtered_df)
-        if not tda.empty:
-            st.dataframe(
-                style_table(tda, pct_cols=["success_rate","conversion_rate"], epa_cols=["avg_epa"]),
-                use_container_width=True)
-        else:
-            st.info("Not enough data.")
+        with cvc_right:
+            top4    = cvs.nlargest(4, "avg_epa").reset_index(drop=True)
+            bottom3 = cvs.nsmallest(3, "avg_epa").reset_index(drop=True)
+
+            st.markdown("""<p style="font-size:12px;color:gray;text-transform:uppercase;
+letter-spacing:.06em;margin-bottom:6px;">Top 4 mejores matchups</p>""",
+                        unsafe_allow_html=True)
+
+            for _, row in top4.iterrows():
+                ec = "#3B6D11" if row["avg_epa"] >= 0 else "#A32D2D"
+                st.markdown(f"""
+<div style="display:flex;align-items:center;justify-content:space-between;
+            padding:9px 12px;border-bottom:0.5px solid var(--color-border-tertiary);">
+  <div>
+    <span style="font-size:15px;font-weight:500;color:var(--color-text-primary);">{row['concept']}</span>
+    <span style="font-size:13px;color:var(--color-text-tertiary);margin:0 4px;">vs</span>
+    <span style="font-size:13px;color:#378ADD;">{row['coverage']}</span>
+  </div>
+  <div style="display:flex;align-items:center;gap:8px;">
+    <span style="font-size:13px;color:var(--color-text-tertiary);">{int(row['plays'])} plays</span>
+    <span style="font-size:18px;font-weight:500;color:{ec};">{row['avg_epa']:+.3f}</span>
+    <span style="font-size:10px;padding:1px 6px;border-radius:20px;
+                background:#EAF3DE;color:#3B6D11;border:1px solid #97C459;">Best</span>
+  </div>
+</div>
+""", unsafe_allow_html=True)
+
+            st.markdown("""<div style="height:1px;background:var(--color-border-tertiary);margin:10px 0;"></div>
+<p style="font-size:12px;color:gray;text-transform:uppercase;
+letter-spacing:.06em;margin-bottom:6px;">3 peores matchups</p>""",
+                        unsafe_allow_html=True)
+
+            for _, row in bottom3.iterrows():
+                ec = "#3B6D11" if row["avg_epa"] >= 0 else "#A32D2D"
+                st.markdown(f"""
+<div style="display:flex;align-items:center;justify-content:space-between;
+            padding:9px 12px;border-bottom:0.5px solid var(--color-border-tertiary);">
+  <div>
+    <span style="font-size:15px;font-weight:500;color:var(--color-text-primary);">{row['concept']}</span>
+    <span style="font-size:13px;color:var(--color-text-tertiary);margin:0 4px;">vs</span>
+    <span style="font-size:13px;color:#378ADD;">{row['coverage']}</span>
+  </div>
+  <div style="display:flex;align-items:center;gap:8px;">
+    <span style="font-size:13px;color:var(--color-text-tertiary);">{int(row['plays'])} plays</span>
+    <span style="font-size:18px;font-weight:500;color:{ec};">{row['avg_epa']:+.3f}</span>
+    <span style="font-size:10px;padding:1px 6px;border-radius:20px;
+                background:#FDE8E8;color:#A32D2D;border:1px solid #F5A0A0;">Avoid</span>
+  </div>
+</div>
+""", unsafe_allow_html=True)
+    else:
+        st.info("Not enough data.")
+
+    st.divider()
+
+    # ── Third Down Analysis ───────────────────────────────────────────────────
+    st.markdown("### 🏈 Third Down Analysis")
+    st.caption("¿Qué conceptos convierten mejor en 3ra oportunidad?")
+
+    tda = third_down_analysis(filtered_df)
+    if tda.empty:
+        st.info("Not enough data.")
+    else:
+        tda_sorted = tda.sort_values("conversion_rate", ascending=False)
+        best  = tda_sorted.iloc[0]
+        worst = tda_sorted.iloc[-1]
+
+        best_concept  = best.name
+        worst_concept = worst.name
+        best_cr   = best["conversion_rate"]
+        worst_cr  = worst["conversion_rate"]
+        best_epa  = best["avg_epa"]
+        best_epa_color  = "#3B6D11" if best_epa >= 0 else "#A32D2D"
+        worst_cr_color  = "#3B6D11" if worst_cr >= 0.5 else "#92610A" if worst_cr >= 0.35 else "#A32D2D"
+
+        st.markdown(f"""
+<div style="background:var(--color-background-secondary);
+            border:0.5px solid var(--color-border-tertiary);
+            border-radius:10px;padding:14px 18px;margin-bottom:16px;">
+  <p style="font-size:10px;color:gray;text-transform:uppercase;
+            letter-spacing:.08em;margin-bottom:6px;">Insight</p>
+  <p style="font-size:15px;color:var(--color-text-primary);line-height:1.6;margin:0;">
+    El concepto con mayor tasa de conversión en 3ra oportunidad es
+    <span style="color:#378ADD;font-weight:500;">{best_concept}</span>
+    con un <span style="color:#3B6D11;font-weight:500;">{best_cr:.1%}</span>
+    de conversión y un EPA promedio de
+    <span style="color:{best_epa_color};font-weight:500;">{best_epa:+.3f}</span>.<br><br>
+    El concepto con menor conversión es
+    <span style="color:#378ADD;font-weight:500;">{worst_concept}</span>
+    (<span style="color:{worst_cr_color};font-weight:500;">{worst_cr:.1%}</span>)
+    — considerar alternativas en situaciones de 3ra oportunidad corta.
+  </p>
+</div>
+""", unsafe_allow_html=True)
+
+        card_cols = st.columns(3)
+        for i, (concept, row) in enumerate(tda_sorted.iterrows()):
+            cr       = row["conversion_rate"]
+            avg_epa  = row["avg_epa"]
+            avg_yds  = row["avg_yards"]
+            plays    = int(row["plays"])
+            bar_pct  = int(cr * 100)
+
+            cr_color  = "#3B6D11" if cr >= 0.5 else "#92610A" if cr >= 0.35 else "#A32D2D"
+            epa_color = "#3B6D11" if avg_epa >= 0 else "#A32D2D"
+
+            with card_cols[i % 3]:
+                st.markdown(f"""
+<div style="background:var(--color-background-secondary);
+            border:0.5px solid var(--color-border-tertiary);
+            border-radius:10px;padding:14px 16px;margin-bottom:10px;">
+  <div style="margin-bottom:10px;">
+    <div style="font-size:15px;font-weight:500;color:var(--color-text-primary);margin-bottom:2px;">{concept}</div>
+    <div style="font-size:11px;color:gray;">{plays:,} plays</div>
+  </div>
+  <div style="font-size:28px;font-weight:500;color:{cr_color};margin-bottom:6px;">{cr:.1%}</div>
+  <div style="font-size:10px;color:gray;text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px;">Conversion rate</div>
+  <div style="width:100%;height:5px;background:var(--color-border-tertiary);
+              border-radius:3px;overflow:hidden;margin-bottom:12px;">
+    <div style="width:{bar_pct}%;height:100%;background:{cr_color};border-radius:3px;"></div>
+  </div>
+  <div style="display:flex;gap:16px;">
+    <div>
+      <div style="font-size:10px;color:gray;text-transform:uppercase;letter-spacing:.06em;">Avg EPA</div>
+      <div style="font-size:13px;font-weight:500;color:{epa_color};">{avg_epa:+.3f}</div>
+    </div>
+    <div>
+      <div style="font-size:10px;color:gray;text-transform:uppercase;letter-spacing:.06em;">Avg Yards</div>
+      <div style="font-size:13px;font-weight:500;">{avg_yds:.1f}</div>
+    </div>
+  </div>
+</div>
+""", unsafe_allow_html=True)
 
     # Formation vs Def Formation
     st.divider()
