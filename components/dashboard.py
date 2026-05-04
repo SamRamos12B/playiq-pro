@@ -894,17 +894,136 @@ letter-spacing:.06em;margin-bottom:6px;">3 peores matchups</p>""",
   </div>
 </div>
 """, unsafe_allow_html=True)
-
-    # Formation vs Def Formation
+    
     st.divider()
-    st.subheader("Formation vs Defensive Formation")
-    fvf = formation_vs_formation(filtered_df).head(30)
-    if not fvf.empty:
-        st.dataframe(
-            style_table(fvf, pct_cols=["success_rate"], epa_cols=["avg_epa"]),
-            use_container_width=True)
-    else:
+
+    # ── Formation vs Defense ──────────────────────────────────────────────────
+    st.markdown("### 🏟️ Formation vs Defense")
+    st.caption("¿Qué formación funciona mejor contra cada defensa?")
+
+    fvf = formation_vs_formation(filtered_df)
+    if fvf.empty:
         st.info("Not enough data.")
+    else:
+        best_row      = fvf.loc[fvf["avg_epa"].idxmax()]
+        best_epa_color = "#3B6D11" if best_row["avg_epa"] >= 0 else "#A32D2D"
+
+        def_plays  = fvf.groupby("def_formation")["plays"].sum()
+        top_def    = def_plays.idxmax()
+        top_def_rows = fvf[fvf["def_formation"] == top_def].sort_values("avg_epa", ascending=False)
+        best_ctr   = top_def_rows.iloc[0] if not top_def_rows.empty else None
+        if best_ctr is not None:
+            ctr_epa_color = "#3B6D11" if best_ctr["avg_epa"] >= 0 else "#A32D2D"
+            counter_line  = (
+                f'La defensa más frecuente es <span style="color:#378ADD;font-weight:500;">{top_def}</span>'
+                f' — la formación que mejor la contrarresta es'
+                f' <span style="color:#378ADD;font-weight:500;">{best_ctr["formation_label"]}</span>'
+                f' (<span style="color:{ctr_epa_color};font-weight:500;">{best_ctr["avg_epa"]:+.3f} EPA</span>).'
+            )
+        else:
+            counter_line = ""
+
+        st.markdown(f"""
+<div style="background:var(--color-background-secondary);
+            border:0.5px solid var(--color-border-tertiary);
+            border-radius:10px;padding:14px 18px;margin-bottom:16px;">
+  <p style="font-size:10px;color:gray;text-transform:uppercase;
+            letter-spacing:.08em;margin-bottom:6px;">Insight</p>
+  <p style="font-size:15px;color:var(--color-text-primary);line-height:1.6;margin:0;">
+    El mejor matchup ofensivo es
+    <span style="color:#378ADD;font-weight:500;">{best_row['formation_label']}</span>
+    vs <span style="color:#378ADD;font-weight:500;">{best_row['def_formation']}</span>
+    con un EPA promedio de
+    <span style="color:{best_epa_color};font-weight:500;">{best_row['avg_epa']:+.3f}</span>.<br><br>
+    {counter_line}
+  </p>
+</div>
+""", unsafe_allow_html=True)
+
+        fvf_left, fvf_right = st.columns(2)
+
+        with fvf_left:
+            st.markdown(
+                '<p style="font-size:11px;color:gray;text-transform:uppercase;'
+                'letter-spacing:.08em;margin-bottom:10px;">Por formación defensiva → mejor ataque</p>',
+                unsafe_allow_html=True)
+
+            def_order = (
+                fvf.groupby("def_formation")["avg_epa"].max()
+                .sort_values(ascending=False)
+                .index.tolist()
+            )
+            for def_form in def_order:
+                group      = (fvf[fvf["def_formation"] == def_form]
+                              .sort_values("avg_epa", ascending=False)
+                              .head(3))
+                group_list = list(group.iterrows())
+                rows_html  = ""
+                for j, (_, row) in enumerate(group_list):
+                    ec        = "#3B6D11" if row["avg_epa"] >= 0 else "#A32D2D"
+                    is_last   = j == len(group_list) - 1
+                    border    = "" if is_last else "border-bottom:0.5px solid var(--color-border-tertiary);"
+                    pill      = ('<span style="font-size:10px;padding:1px 6px;border-radius:20px;'
+                                 'background:#EAF3DE;color:#3B6D11;border:1px solid #97C459;'
+                                 'margin-left:6px;">Best</span>') if j == 0 else ""
+                    name_style = ("font-size:13px;font-weight:500;color:var(--color-text-primary);"
+                                  if j == 0 else "font-size:13px;color:var(--color-text-secondary);")
+                    rows_html += (
+                        f'<div style="display:flex;justify-content:space-between;align-items:center;'
+                        f'padding:6px 0;{border}">'
+                        f'  <div style="display:flex;align-items:center;">'
+                        f'    <span style="{name_style}">{row["formation_label"]}</span>{pill}'
+                        f'  </div>'
+                        f'  <div style="display:flex;align-items:center;gap:8px;">'
+                        f'    <span style="font-size:11px;color:var(--color-text-tertiary);">{int(row["plays"])} plays</span>'
+                        f'    <span style="font-size:13px;font-weight:500;color:{ec};">{row["avg_epa"]:+.3f}</span>'
+                        f'  </div>'
+                        f'</div>'
+                    )
+                st.markdown(f"""
+<div style="background:var(--color-background-secondary);
+            border:0.5px solid var(--color-border-tertiary);
+            border-radius:10px;padding:10px 14px;
+            padding-bottom:12px;margin-bottom:4px;
+            border-bottom:1px solid var(--color-border-tertiary);">
+  <div style="font-size:11px;color:#378ADD;font-weight:500;margin-bottom:6px;">vs {def_form}</div>
+  {rows_html}
+</div>
+""", unsafe_allow_html=True)
+
+        with fvf_right:
+            st.markdown(
+                '<p style="font-size:11px;color:gray;text-transform:uppercase;'
+                'letter-spacing:.08em;margin-bottom:10px;">Top matchups por EPA</p>',
+                unsafe_allow_html=True)
+
+            top7      = fvf.head(7)
+            rows_html = ""
+            for rank, (_, row) in enumerate(top7.iterrows(), start=1):
+                ec = "#3B6D11" if row["avg_epa"] >= 0 else "#A32D2D"
+                rows_html += (
+                    f'<div style="display:flex;align-items:center;gap:10px;'
+                    f'padding:9px 12px;border-bottom:0.5px solid var(--color-border-tertiary);">'
+                    f'  <span style="font-size:11px;color:var(--color-text-tertiary);min-width:16px;">{rank}.</span>'
+                    f'  <div style="display:flex;flex-direction:column;gap:2px;">'
+                    f'    <div style="display:flex;align-items:center;gap:6px;">'
+                    f'      <span style="font-size:13px;font-weight:500;color:var(--color-text-primary);">{row["formation_label"]}</span>'
+                    f'      <span style="font-size:12px;color:#378ADD;">vs {row["def_formation"]}</span>'
+                    f'    </div>'
+                    f'    <div style="display:flex;align-items:baseline;gap:6px;">'
+                    f'      <span style="font-size:14px;font-weight:500;color:{ec};">{row["avg_epa"]:+.3f}</span>'
+                    f'      <span style="font-size:11px;color:var(--color-text-tertiary);">{int(row["plays"])} plays</span>'
+                    f'    </div>'
+                    f'  </div>'
+                    f'</div>'
+                )
+            st.markdown(f"""
+<div style="background:var(--color-background-secondary);
+            border:0.5px solid var(--color-border-tertiary);
+            border-radius:10px;overflow:hidden;">
+  {rows_html}
+</div>
+""", unsafe_allow_html=True)
 
     st.divider()
     render_counter_intelligence(filtered_df)
