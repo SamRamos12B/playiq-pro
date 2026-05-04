@@ -597,6 +597,9 @@ def render_analytics(filtered_df: pd.DataFrame, full_df: pd.DataFrame = None):
 """, unsafe_allow_html=True)
 
     st.divider()
+    render_counter_intelligence(filtered_df)
+
+    st.divider()
 
     # ── Concept Performance ─────────────────────────────
     st.markdown("### 📈 Concept Performance")
@@ -1025,8 +1028,6 @@ letter-spacing:.06em;margin-bottom:6px;">3 peores matchups</p>""",
 </div>
 """, unsafe_allow_html=True)
 
-    st.divider()
-    render_counter_intelligence(filtered_df)
 
 def render_counter_intelligence(filtered_df: pd.DataFrame):
     st.markdown("### 🛡️ Counter Intelligence")
@@ -1066,7 +1067,22 @@ def render_counter_intelligence(filtered_df: pd.DataFrame):
     best_epa        = best_counter["avg_epa"]
 
     # ── Insight box ───────────────────────────────────────
-    epa_color  = "#3B6D11" if best_epa <= 0 else "#BA7517"
+    epa_color = "#3B6D11" if best_epa <= 0 else "#BA7517"
+    if best_epa <= 0:
+        counter_sentence = (
+            f'La cobertura que mejor lo neutraliza es'
+            f' <span style="color:{epa_color};font-weight:500;">{best_coverage}</span>,'
+            f' con EPA ofensivo de'
+            f' <span style="color:{epa_color};font-weight:500;">{best_epa:+.3f}</span>.'
+        )
+    else:
+        counter_sentence = (
+            f'La cobertura que más lo contiene es'
+            f' <span style="color:{epa_color};font-weight:500;">{best_coverage}</span>,'
+            f' reduciendo el EPA ofensivo a su mínimo de'
+            f' <span style="color:{epa_color};font-weight:500;">{best_epa:+.3f}</span>'
+            f' — ninguna cobertura lo neutraliza completamente con los filtros actuales.'
+        )
     st.markdown(f"""
 <div style="background:var(--color-background-secondary);
             border:0.5px solid var(--color-border-tertiary);
@@ -1077,24 +1093,23 @@ def render_counter_intelligence(filtered_df: pd.DataFrame):
     El concepto más eficiente en los datos actuales es
     <span style="color:#378ADD;font-weight:500;">{top_concept}</span>
     (<span style="color:#3B6D11;font-weight:500;">{top_epa:+.3f} EPA</span>).
-    La cobertura que mejor lo neutraliza es
-    <span style="color:{epa_color};font-weight:500;">{best_coverage}</span>,
-    reduciendo el EPA ofensivo a
-    <span style="color:{epa_color};font-weight:500;">{best_epa:+.3f}</span>.
+    {counter_sentence}
   </p>
 </div>
 """, unsafe_allow_html=True)
 
     # ── Top 3 cards ───────────────────────────────────────
     top3 = concept_cvs.head(3)
-    max_effectiveness = abs(top3.iloc[0]["avg_epa"]) if not top3.empty else 1
+    epa_min   = top3["avg_epa"].min()  # best counter (lowest EPA)
+    epa_max   = top3["avg_epa"].max()  # worst counter
+    epa_range = epa_max - epa_min if epa_max != epa_min else 1
     cols  = st.columns(3)
     ranks = ["✦ Best counter", "#2", "#3"]
 
     for i, (col, (_, row)) in enumerate(zip(cols, top3.iterrows())):
         epa_val   = row["avg_epa"]
         epa_color = "#3B6D11" if epa_val <= 0 else "#A32D2D" if epa_val > 0.2 else "#BA7517"
-        bar_pct   = max(5, int((1 - abs(epa_val) / (max_effectiveness + 0.01)) * 100)) if i > 0 else 95
+        bar_pct   = max(5, int((epa_max - epa_val) / epa_range * 95))
         bar_color = "#3B6D11" if epa_val <= 0 else "#BA7517" if epa_val < 0.2 else "#A32D2D"
         border    = "border:1px solid #3B6D11;" if i == 0 else ""
 
