@@ -6,7 +6,6 @@ requests==2.31.0
 stripe==8.9.0
 anthropic==0.25.0
 nfl-data-py==0.3.3
-pandas>=2.0.0
+pandas>=1.0.0,<2.0.0
 plotly>=5.18.0
 gspread==6.0.0
-google-auth==2.29.0
