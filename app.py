@@ -1,9 +1,10 @@
 import streamlit as st
 from auth import require_auth, logout
-from paywall import check_and_handle_payment, require_pro
+from paywall import check_and_handle_payment
 from data.loader import load_data, filter_data
 from components.free_dashboard import render_free_filters, render_free_dashboard
 from components.dashboard import render_filters, render_explorer, render_analytics
+from components.ai_scout import render_ai_scout
 
 st.set_page_config(
     page_title="PlayIQ Pro",
