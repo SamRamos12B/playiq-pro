@@ -14,6 +14,8 @@ def get_supabase():
     )
 
 def get_google_flow():
+    import os
+    os.environ["OAUTHLIB_INSECURE_TRANSPORT"] = "1"
     return Flow.from_client_config(
         client_config={
             "web": {
@@ -67,6 +69,9 @@ def login():
 
 # ── Callback ─────────────────────────────────────────────
 def handle_callback(code: str):
+    import os
+    os.environ["OAUTHLIB_INSECURE_TRANSPORT"] = "1"
+    os.environ["OAUTHLIB_RELAX_TOKEN_SCOPE"] = "1"
     flow = get_google_flow()
     
     # Desempacar verifier + stripe_session del state

@@ -3,9 +3,15 @@ import streamlit as st
 
 CSV_PATH = "data/processed/nfl_plays_slim.csv"
 
+_USECOLS = [
+    "posteam", "defteam", "season", "week", "play_type",
+    "yards_gained", "epa", "down", "ydstogo",
+    "concept", "coverage", "formation_label", "def_formation",
+]
+
 @st.cache_data(show_spinner="Cargando datos NFL...")
 def load_data() -> pd.DataFrame:
-    df = pd.read_csv(CSV_PATH)
+    df = pd.read_csv(CSV_PATH, usecols=_USECOLS)
     return df
 
 def filter_data(

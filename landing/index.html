@@ -1,0 +1,876 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PlayIQ Pro — NFL Tactical Intelligence</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:ital,wght@0,300;0,400;0,500;0,700;1,300&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --green:   #1a3a1a;
+      --green2:  #2d5a2d;
+      --lime:    #a8e063;
+      --lime2:   #c8f07a;
+      --white:   #f0ede6;
+      --gray:    #8a8a7a;
+      --dark:    #0d0d0d;
+      --dark2:   #141414;
+      --dark3:   #1c1c1c;
+      --red:     #c0392b;
+      --gold:    #d4a017;
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      background: var(--dark);
+      color: var(--white);
+      font-family: 'DM Sans', sans-serif;
+      overflow-x: hidden;
+    }
+
+    /* ── LANG TOGGLE ── */
+    .lang-bar {
+      position: fixed;
+      top: 0; left: 0; right: 0;
+      z-index: 100;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 14px 40px;
+      background: rgba(13,13,13,0.85);
+      backdrop-filter: blur(12px);
+      border-bottom: 1px solid rgba(168,224,99,0.1);
+    }
+
+    .logo {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 22px;
+      letter-spacing: 2px;
+      color: var(--lime);
+    }
+
+    .logo span { color: var(--white); }
+
+    .lang-toggle {
+      display: flex;
+      gap: 4px;
+      background: var(--dark3);
+      border-radius: 6px;
+      padding: 3px;
+    }
+
+    .lang-btn {
+      padding: 5px 14px;
+      border: none;
+      border-radius: 4px;
+      font-size: 12px;
+      font-weight: 500;
+      cursor: pointer;
+      font-family: 'DM Sans', sans-serif;
+      transition: all 0.2s;
+      background: transparent;
+      color: var(--gray);
+    }
+
+    .lang-btn.active {
+      background: var(--lime);
+      color: var(--dark);
+    }
+
+    .nav-cta {
+      padding: 8px 20px;
+      background: var(--lime);
+      color: var(--dark);
+      border: none;
+      border-radius: 6px;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      font-family: 'DM Sans', sans-serif;
+      text-decoration: none;
+      transition: background 0.2s;
+    }
+
+    .nav-cta:hover { background: var(--lime2); }
+
+    /* ── HERO ── */
+    .hero {
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 120px 40px 80px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .hero-bg {
+      position: absolute;
+      inset: 0;
+      background:
+        radial-gradient(ellipse 60% 50% at 50% 60%, rgba(45,90,45,0.25) 0%, transparent 70%),
+        radial-gradient(ellipse 40% 30% at 80% 20%, rgba(168,224,99,0.06) 0%, transparent 60%);
+    }
+
+    .field-lines {
+      position: absolute;
+      inset: 0;
+      opacity: 0.04;
+      background-image:
+        repeating-linear-gradient(90deg, var(--lime) 0px, var(--lime) 1px, transparent 1px, transparent 80px);
+    }
+
+    .hero-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 16px;
+      border: 1px solid rgba(168,224,99,0.3);
+      border-radius: 20px;
+      font-size: 12px;
+      font-family: 'JetBrains Mono', monospace;
+      color: var(--lime);
+      margin-bottom: 32px;
+      animation: fadeUp 0.6s ease both;
+    }
+
+    .hero-badge::before {
+      content: '';
+      width: 6px; height: 6px;
+      background: var(--lime);
+      border-radius: 50%;
+      animation: pulse 2s ease infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.4; transform: scale(0.8); }
+    }
+
+    .hero-title {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: clamp(56px, 10vw, 120px);
+      line-height: 0.9;
+      text-align: center;
+      letter-spacing: 2px;
+      margin-bottom: 8px;
+      animation: fadeUp 0.6s 0.1s ease both;
+    }
+
+    .hero-title .accent { color: var(--lime); }
+
+    .hero-title-es {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: clamp(36px, 6vw, 72px);
+      line-height: 1;
+      text-align: center;
+      letter-spacing: 1px;
+      color: var(--gray);
+      margin-bottom: 32px;
+      animation: fadeUp 0.6s 0.15s ease both;
+    }
+
+    .hero-sub {
+      font-size: clamp(16px, 2.5vw, 20px);
+      color: var(--gray);
+      text-align: center;
+      max-width: 600px;
+      line-height: 1.6;
+      margin-bottom: 48px;
+      animation: fadeUp 0.6s 0.2s ease both;
+    }
+
+    .hero-sub em { color: var(--white); font-style: normal; }
+
+    .hero-ctas {
+      display: flex;
+      gap: 16px;
+      animation: fadeUp 0.6s 0.3s ease both;
+      margin-bottom: 80px;
+    }
+
+    .btn-primary {
+      padding: 14px 32px;
+      background: var(--lime);
+      color: var(--dark);
+      border: none;
+      border-radius: 8px;
+      font-size: 15px;
+      font-weight: 700;
+      cursor: pointer;
+      font-family: 'DM Sans', sans-serif;
+      text-decoration: none;
+      transition: all 0.2s;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .btn-primary:hover {
+      background: var(--lime2);
+      transform: translateY(-2px);
+    }
+
+    .btn-secondary {
+      padding: 14px 32px;
+      background: transparent;
+      color: var(--white);
+      border: 1px solid rgba(240,237,230,0.2);
+      border-radius: 8px;
+      font-size: 15px;
+      font-weight: 500;
+      cursor: pointer;
+      font-family: 'DM Sans', sans-serif;
+      text-decoration: none;
+      transition: all 0.2s;
+    }
+
+    .btn-secondary:hover {
+      border-color: rgba(168,224,99,0.4);
+      color: var(--lime);
+    }
+
+    /* ── DASHBOARD PREVIEW ── */
+    .dashboard-preview {
+      width: 100%;
+      max-width: 960px;
+      background: var(--dark2);
+      border: 1px solid rgba(168,224,99,0.15);
+      border-radius: 12px;
+      overflow: hidden;
+      box-shadow: 0 40px 120px rgba(0,0,0,0.6), 0 0 0 1px rgba(168,224,99,0.05);
+      animation: fadeUp 0.8s 0.4s ease both;
+    }
+
+    .preview-bar {
+      background: var(--dark3);
+      padding: 12px 16px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      border-bottom: 1px solid rgba(255,255,255,0.06);
+    }
+
+    .dot { width: 10px; height: 10px; border-radius: 50%; }
+    .dot-red { background: #ff5f57; }
+    .dot-yellow { background: #ffbd2e; }
+    .dot-green { background: #28c840; }
+
+    .preview-url {
+      margin-left: 12px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11px;
+      color: var(--gray);
+    }
+
+    .preview-content {
+      padding: 24px;
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr 1fr;
+      gap: 12px;
+    }
+
+    .preview-metric {
+      background: rgba(255,255,255,0.03);
+      border: 0.5px solid rgba(255,255,255,0.08);
+      border-radius: 8px;
+      padding: 14px;
+    }
+
+    .pm-label { font-size: 9px; color: var(--gray); text-transform: uppercase; letter-spacing: .08em; margin-bottom: 6px; }
+    .pm-value { font-size: 22px; font-weight: 500; }
+    .pm-value.pos { color: var(--lime); }
+    .pm-value.warn { color: var(--gold); }
+    .pm-insight { font-size: 10px; color: rgba(138,138,122,0.7); margin-top: 4px; }
+
+    .preview-chart {
+      grid-column: span 4;
+      background: rgba(255,255,255,0.02);
+      border: 0.5px solid rgba(255,255,255,0.06);
+      border-radius: 8px;
+      padding: 14px;
+      height: 80px;
+      display: flex;
+      align-items: flex-end;
+      gap: 6px;
+    }
+
+    .bar-item {
+      flex: 1;
+      border-radius: 3px 3px 0 0;
+      opacity: 0.8;
+    }
+
+    /* ── PROBLEM ── */
+    .section {
+      padding: 100px 40px;
+      max-width: 1100px;
+      margin: 0 auto;
+    }
+
+    .section-tag {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11px;
+      color: var(--lime);
+      letter-spacing: .1em;
+      text-transform: uppercase;
+      margin-bottom: 20px;
+    }
+
+    .section-title {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: clamp(36px, 6vw, 64px);
+      line-height: 1;
+      letter-spacing: 1px;
+      margin-bottom: 20px;
+    }
+
+    .section-sub {
+      font-size: 18px;
+      color: var(--gray);
+      line-height: 1.7;
+      max-width: 600px;
+    }
+
+    .section-sub em { color: var(--white); font-style: normal; }
+
+    /* ── FEATURES ── */
+    .features-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 2px;
+      margin-top: 60px;
+    }
+
+    .feature-card {
+      background: var(--dark2);
+      padding: 40px 32px;
+      position: relative;
+      overflow: hidden;
+      transition: background 0.3s;
+    }
+
+    .feature-card:hover { background: var(--dark3); }
+
+    .feature-card::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0;
+      width: 100%; height: 2px;
+      background: var(--lime);
+      transform: scaleX(0);
+      transform-origin: left;
+      transition: transform 0.3s;
+    }
+
+    .feature-card:hover::before { transform: scaleX(1); }
+
+    .feature-icon {
+      font-size: 32px;
+      margin-bottom: 20px;
+      display: block;
+    }
+
+    .feature-title {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 24px;
+      letter-spacing: 1px;
+      margin-bottom: 12px;
+    }
+
+    .feature-desc {
+      font-size: 14px;
+      color: var(--gray);
+      line-height: 1.7;
+    }
+
+    .feature-desc em { color: var(--white); font-style: normal; }
+
+    /* ── AUDIENCES ── */
+    .audiences {
+      padding: 100px 40px;
+      background: var(--dark2);
+    }
+
+    .audiences-inner {
+      max-width: 1100px;
+      margin: 0 auto;
+    }
+
+    .audience-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 24px;
+      margin-top: 60px;
+    }
+
+    .audience-card {
+      border: 1px solid rgba(168,224,99,0.1);
+      border-radius: 12px;
+      padding: 32px;
+      position: relative;
+    }
+
+    .audience-who {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11px;
+      color: var(--lime);
+      text-transform: uppercase;
+      letter-spacing: .08em;
+      margin-bottom: 16px;
+    }
+
+    .audience-title {
+      font-size: 20px;
+      font-weight: 600;
+      margin-bottom: 12px;
+    }
+
+    .audience-desc {
+      font-size: 14px;
+      color: var(--gray);
+      line-height: 1.7;
+    }
+
+    .audience-quote {
+      margin-top: 20px;
+      padding-top: 20px;
+      border-top: 1px solid rgba(255,255,255,0.06);
+      font-size: 13px;
+      color: rgba(168,224,99,0.7);
+      font-style: italic;
+    }
+
+    /* ── PRICING ── */
+    .pricing {
+      padding: 100px 40px;
+      max-width: 800px;
+      margin: 0 auto;
+      text-align: center;
+    }
+
+    .pricing-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+      margin-top: 60px;
+      text-align: left;
+    }
+
+    .pricing-card {
+      background: var(--dark2);
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 12px;
+      padding: 36px;
+    }
+
+    .pricing-card.featured {
+      border-color: var(--lime);
+      background: var(--green);
+      position: relative;
+    }
+
+    .pricing-badge {
+      position: absolute;
+      top: -12px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: var(--lime);
+      color: var(--dark);
+      font-size: 11px;
+      font-weight: 700;
+      padding: 4px 16px;
+      border-radius: 20px;
+      white-space: nowrap;
+    }
+
+    .pricing-tier {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11px;
+      color: var(--gray);
+      text-transform: uppercase;
+      letter-spacing: .1em;
+      margin-bottom: 12px;
+    }
+
+    .pricing-price {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 56px;
+      letter-spacing: 1px;
+      line-height: 1;
+      margin-bottom: 6px;
+    }
+
+    .pricing-price span {
+      font-family: 'DM Sans', sans-serif;
+      font-size: 18px;
+      font-weight: 300;
+      color: var(--gray);
+    }
+
+    .pricing-features {
+      list-style: none;
+      margin-top: 28px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .pricing-features li {
+      font-size: 14px;
+      color: var(--gray);
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+    }
+
+    .pricing-features li::before {
+      content: '✓';
+      color: var(--lime);
+      font-weight: 700;
+      flex-shrink: 0;
+    }
+
+    .pricing-features li.disabled { color: rgba(138,138,122,0.4); }
+    .pricing-features li.disabled::before { content: '—'; color: rgba(138,138,122,0.3); }
+
+    .pricing-cta {
+      margin-top: 32px;
+      width: 100%;
+      padding: 14px;
+      border-radius: 8px;
+      font-size: 15px;
+      font-weight: 600;
+      cursor: pointer;
+      font-family: 'DM Sans', sans-serif;
+      text-decoration: none;
+      display: block;
+      text-align: center;
+      transition: all 0.2s;
+    }
+
+    .pricing-cta.free {
+      background: transparent;
+      border: 1px solid rgba(255,255,255,0.15);
+      color: var(--white);
+    }
+
+    .pricing-cta.free:hover {
+      border-color: rgba(168,224,99,0.4);
+      color: var(--lime);
+    }
+
+    .pricing-cta.pro {
+      background: var(--lime);
+      border: none;
+      color: var(--dark);
+    }
+
+    .pricing-cta.pro:hover {
+      background: var(--lime2);
+      transform: translateY(-1px);
+    }
+
+    /* ── FINAL CTA ── */
+    .final-cta {
+      padding: 120px 40px;
+      text-align: center;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .final-cta-bg {
+      position: absolute;
+      inset: 0;
+      background: radial-gradient(ellipse 70% 60% at 50% 50%, rgba(45,90,45,0.3) 0%, transparent 70%);
+    }
+
+    .final-cta-title {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: clamp(48px, 8vw, 96px);
+      line-height: 0.95;
+      letter-spacing: 2px;
+      position: relative;
+      margin-bottom: 24px;
+    }
+
+    .final-cta-title .lime { color: var(--lime); }
+
+    .final-cta-sub {
+      font-size: 18px;
+      color: var(--gray);
+      max-width: 500px;
+      margin: 0 auto 48px;
+      line-height: 1.6;
+      position: relative;
+    }
+
+    /* ── FOOTER ── */
+    footer {
+      padding: 40px;
+      border-top: 1px solid rgba(255,255,255,0.06);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .footer-logo {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 18px;
+      letter-spacing: 2px;
+      color: var(--lime);
+    }
+
+    .footer-copy {
+      font-size: 12px;
+      color: var(--gray);
+    }
+
+    /* ── ANIMATIONS ── */
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(24px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    /* ── RESPONSIVE ── */
+    @media (max-width: 768px) {
+      .lang-bar { padding: 12px 20px; }
+      .hero { padding: 100px 24px 60px; }
+      .hero-ctas { flex-direction: column; align-items: center; }
+      .features-grid { grid-template-columns: 1fr; }
+      .audience-grid { grid-template-columns: 1fr; }
+      .pricing-grid { grid-template-columns: 1fr; }
+      .preview-content { grid-template-columns: 1fr 1fr; }
+      .preview-chart { grid-column: span 2; }
+      footer { flex-direction: column; gap: 12px; text-align: center; }
+      .nav-cta { display: none; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- NAV -->
+<nav class="lang-bar">
+  <div class="logo">PlayIQ<span> Pro</span></div>
+  <div style="display:flex;align-items:center;gap:16px;">
+    <div class="lang-toggle">
+      <button class="lang-btn active" onclick="setLang('en')" id="btn-en">EN</button>
+      <button class="lang-btn" onclick="setLang('es')" id="btn-es">ES</button>
+    </div>
+    <a href="YOUR_APP_URL" class="nav-cta" data-en="Try Free" data-es="Prueba Gratis">Try Free</a>
+  </div>
+</nav>
+
+<!-- HERO -->
+<section class="hero">
+  <div class="hero-bg"></div>
+  <div class="field-lines"></div>
+  <div class="hero-badge" data-en="🏈 NFL Tactical Intelligence Platform" data-es="🏈 Plataforma de Inteligencia Táctica NFL">
+    🏈 NFL Tactical Intelligence Platform
+  </div>
+  <h1 class="hero-title">
+    <span data-en="NFL INTELLIGENCE<br>FOR <span class='accent'>EVERY</span> FAN" data-es="INTELIGENCIA NFL<br>PARA <span class='accent'>CADA</span> AFICIONADO">
+      NFL INTELLIGENCE<br>FOR <span class="accent">EVERY</span> FAN
+    </span>
+  </h1>
+  <p class="hero-sub" data-en="From casual viewer to tactical expert — <em>understand every play, every decision, every game.</em>" data-es="Del aficionado casual al experto táctico — <em>entiende cada jugada, cada decisión, cada partido.</em>">
+    From casual viewer to tactical expert — <em>understand every play, every decision, every game.</em>
+  </p>
+  <div class="hero-ctas">
+    <a href="YOUR_APP_URL" class="btn-primary" data-en="🚀 Start Free" data-es="🚀 Empezar Gratis">🚀 Start Free</a>
+    <a href="#features" class="btn-secondary" data-en="See how it works" data-es="Ver cómo funciona">See how it works</a>
+  </div>
+
+  <!-- Dashboard preview -->
+  <div class="dashboard-preview">
+    <div class="preview-bar">
+      <div class="dot dot-red"></div>
+      <div class="dot dot-yellow"></div>
+      <div class="dot dot-green"></div>
+      <span class="preview-url">playiqpro.app</span>
+    </div>
+    <div class="preview-content">
+      <div class="preview-metric">
+        <div class="pm-label">Total Plays</div>
+        <div class="pm-value">147,928</div>
+        <div class="pm-insight">✓ Sufficient sample</div>
+      </div>
+      <div class="preview-metric">
+        <div class="pm-label">Avg EPA</div>
+        <div class="pm-value pos">+0.013</div>
+        <div class="pm-insight">↑ Above average</div>
+      </div>
+      <div class="preview-metric">
+        <div class="pm-label">Success Rate</div>
+        <div class="pm-value warn">42.8%</div>
+        <div class="pm-insight">→ On average</div>
+      </div>
+      <div class="preview-metric">
+        <div class="pm-label">Top Concept</div>
+        <div class="pm-value" style="font-size:16px;margin-top:4px;">Levels</div>
+        <div class="pm-insight">↗ Most efficient</div>
+      </div>
+      <div class="preview-chart">
+        <div class="bar-item" style="height:40%;background:#2d5a2d;"></div>
+        <div class="bar-item" style="height:55%;background:#3d7a3d;"></div>
+        <div class="bar-item" style="height:35%;background:#2d5a2d;"></div>
+        <div class="bar-item" style="height:70%;background:#4d9a4d;"></div>
+        <div class="bar-item" style="height:60%;background:#3d7a3d;"></div>
+        <div class="bar-item" style="height:85%;background:#a8e063;"></div>
+        <div class="bar-item" style="height:75%;background:#7ab83a;"></div>
+        <div class="bar-item" style="height:90%;background:#a8e063;"></div>
+        <div class="bar-item" style="height:65%;background:#4d9a4d;"></div>
+        <div class="bar-item" style="height:50%;background:#3d7a3d;"></div>
+        <div class="bar-item" style="height:80%;background:#7ab83a;"></div>
+        <div class="bar-item" style="height:95%;background:#a8e063;"></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- FEATURES -->
+<section class="section" id="features">
+  <div class="section-tag" data-en="What you get" data-es="Lo que obtienes">What you get</div>
+  <h2 class="section-title" data-en="GAME DAY<br>INTELLIGENCE" data-es="INTELIGENCIA<br>DE GAMEDAY">GAME DAY<br>INTELLIGENCE</h2>
+  <p class="section-sub" data-en="Three tools built for the way fans actually watch football." data-es="Tres herramientas construidas para la forma en que los aficionados realmente ven el football.">Three tools built for the way fans actually watch football.</p>
+
+  <div class="features-grid">
+    <div class="feature-card">
+      <span class="feature-icon">🏈</span>
+      <h3 class="feature-title" data-en="ARRIVE PREPARED" data-es="LLEGA PREPARADO">ARRIVE PREPARED</h3>
+      <p class="feature-desc" data-en="Know which <em>concepts work against any defense</em> before kickoff. See trends, tendencies, and what to watch for — before the game starts." data-es="Sabe qué <em>conceptos funcionan contra cada defensa</em> antes del kickoff. Tendencias y qué observar — antes de que inicie el partido.">Know which <em>concepts work against any defense</em> before kickoff. See trends, tendencies, and what to watch for — before the game starts.</p>
+    </div>
+    <div class="feature-card">
+      <span class="feature-icon">📊</span>
+      <h3 class="feature-title" data-en="UNDERSTAND THE COACHES" data-es="ENTIENDE A LOS COACHES">UNDERSTAND THE COACHES</h3>
+      <p class="feature-desc" data-en="See the <em>data behind every play call</em> — why it worked, when it fails, and what the numbers say about coaching decisions." data-es="Ve los <em>datos detrás de cada jugada</em> — por qué funcionó, cuándo falla, y qué dicen los números sobre las decisiones de los coaches.">See the <em>data behind every play call</em> — why it worked, when it fails, and what the numbers say about coaching decisions.</p>
+    </div>
+    <div class="feature-card">
+      <span class="feature-icon">🤖</span>
+      <h3 class="feature-title" data-en="YOUR NFL AI ANALYST" data-es="TU ANALISTA AI DE NFL">YOUR NFL AI ANALYST</h3>
+      <p class="feature-desc" data-en="Ask anything about any play and get <em>instant tactical analysis</em> based on real data. Like having a coach explain the game to you." data-es="Pregunta cualquier cosa sobre cualquier jugada y obtén <em>análisis táctico instantáneo</em> basado en datos reales. Como tener un coach que te explica el juego.">Ask anything about any play and get <em>instant tactical analysis</em> based on real data. Like having a coach explain the game to you.</p>
+    </div>
+  </div>
+</section>
+
+<!-- AUDIENCES -->
+<section class="audiences">
+  <div class="audiences-inner">
+    <div class="section-tag" data-en="Who it's for" data-es="Para quién es">Who it's for</div>
+    <h2 class="section-title" data-en="BUILT FOR<br>YOUR LEVEL" data-es="HECHO PARA<br>TU NIVEL">BUILT FOR<br>YOUR LEVEL</h2>
+
+    <div class="audience-grid">
+      <div class="audience-card">
+        <div class="audience-who" data-en="Casual Fan" data-es="Aficionado Casual">Casual Fan</div>
+        <h3 class="audience-title" data-en="Enjoy the game more" data-es="Disfruta más el juego">Enjoy the game more</h3>
+        <p class="audience-desc" data-en="Finally understand what's happening on the field. No more confusion — just clarity." data-es="Por fin entiende lo que pasa en el campo. Sin confusión — solo claridad.">Finally understand what's happening on the field. No more confusion — just clarity.</p>
+        <p class="audience-quote" data-en="&ldquo;Now I actually understand why the coach called that play&rdquo;" data-es="&ldquo;Ahora entiendo por qué el coach llamó esa jugada&rdquo;">"Now I actually understand why the coach called that play"</p>
+      </div>
+      <div class="audience-card">
+        <div class="audience-who" data-en="Fantasy Player" data-es="Fantasy Player">Fantasy Player</div>
+        <h3 class="audience-title" data-en="Get the edge" data-es="Obtén la ventaja">Get the edge</h3>
+        <p class="audience-desc" data-en="Know which schemes favor your players before gameday. Make smarter lineup decisions backed by data." data-es="Sabe qué esquemas favorecen a tus jugadores antes del partido. Decisiones más inteligentes basadas en datos.">Know which schemes favor your players before gameday. Make smarter lineup decisions backed by data.</p>
+        <p class="audience-quote" data-en="&ldquo;This changed how I approach my weekly lineup decisions&rdquo;" data-es="&ldquo;Esto cambió cómo tomo mis decisiones semanales de lineup&rdquo;">"This changed how I approach my weekly lineup decisions"</p>
+      </div>
+      <div class="audience-card">
+        <div class="audience-who" data-en="Coach / Analyst" data-es="Coach / Analista">Coach / Analyst</div>
+        <h3 class="audience-title" data-en="Tactical depth" data-es="Profundidad táctica">Tactical depth</h3>
+        <p class="audience-desc" data-en="Play-by-play EPA analysis, concept vs coverage breakdowns, and formation intelligence at your fingertips." data-es="Análisis EPA jugada a jugada, desglose concepto vs cobertura, e inteligencia de formaciones al alcance de tu mano.">Play-by-play EPA analysis, concept vs coverage breakdowns, and formation intelligence at your fingertips.</p>
+        <p class="audience-quote" data-en="&ldquo;The Counter Intelligence feature alone is worth the subscription&rdquo;" data-es="&ldquo;Solo la función de Counter Intelligence vale la suscripción&rdquo;">"The Counter Intelligence feature alone is worth the subscription"</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- PRICING -->
+<section class="pricing" id="pricing">
+  <div class="section-tag" data-en="Simple pricing" data-es="Precios simples">Simple pricing</div>
+  <h2 class="section-title" data-en="START FREE.<br>GO <span class='accent'>PRO.</span>" data-es="EMPIEZA GRATIS.<br>PASA A <span class='accent'>PRO.</span>">START FREE.<br>GO <span class="accent">PRO.</span></h2>
+  <p class="section-sub" style="margin:0 auto;" data-en="No credit card required to start. Upgrade when you're ready." data-es="No se requiere tarjeta para empezar. Mejora cuando estés listo.">No credit card required to start. Upgrade when you're ready.</p>
+
+  <div class="pricing-grid">
+    <div class="pricing-card">
+      <div class="pricing-tier" data-en="Free" data-es="Gratis">Free</div>
+      <div class="pricing-price">$0<span data-en="/month" data-es="/mes">/month</span></div>
+      <ul class="pricing-features">
+        <li data-en="EPA dashboard with key metrics" data-es="Dashboard de EPA con métricas clave">EPA dashboard with key metrics</li>
+        <li data-en="Team & season filters" data-es="Filtros por equipo y temporada">Team & season filters</li>
+        <li data-en="5 AI Scout questions/day" data-es="5 preguntas AI Scout/día">5 AI Scout questions/day</li>
+        <li class="disabled" data-en="Full Analytics suite" data-es="Suite Analytics completa">Full Analytics suite</li>
+        <li class="disabled" data-en="Find a Play explorer" data-es="Explorador Find a Play">Find a Play explorer</li>
+        <li class="disabled" data-en="Unlimited AI Scout" data-es="AI Scout ilimitado">Unlimited AI Scout</li>
+      </ul>
+      <a href="YOUR_APP_URL" class="pricing-cta free" data-en="Get started free" data-es="Empieza gratis">Get started free</a>
+    </div>
+
+    <div class="pricing-card featured">
+      <div class="pricing-badge" data-en="⭐ Most popular" data-es="⭐ Más popular">⭐ Most popular</div>
+      <div class="pricing-tier" data-en="Pro" data-es="Pro">Pro</div>
+      <div class="pricing-price" style="color:var(--lime);">$12<span data-en="/month" data-es="/mes">/month</span></div>
+      <ul class="pricing-features">
+        <li data-en="Everything in Free" data-es="Todo lo de Gratis">Everything in Free</li>
+        <li data-en="Full Analytics suite" data-es="Suite Analytics completa">Full Analytics suite</li>
+        <li data-en="Find a Play with diagrams" data-es="Find a Play con diagramas">Find a Play with diagrams</li>
+        <li data-en="Counter Intelligence" data-es="Counter Intelligence">Counter Intelligence</li>
+        <li data-en="Unlimited AI Scout" data-es="AI Scout ilimitado">Unlimited AI Scout</li>
+        <li data-en="Cancel anytime" data-es="Cancela cuando quieras">Cancel anytime</li>
+      </ul>
+      <a href="YOUR_APP_URL" class="pricing-cta pro" data-en="Start Pro — $12/mo" data-es="Empezar Pro — $12/mes">Start Pro — $12/mo</a>
+    </div>
+  </div>
+</section>
+
+<!-- FINAL CTA -->
+<section class="final-cta">
+  <div class="final-cta-bg"></div>
+  <h2 class="final-cta-title">
+    <span data-en="READY TO SEE<br>THE <span class='lime'>GAME</span><br>DIFFERENTLY?" data-es="LISTO PARA VER<br>EL <span class='lime'>JUEGO</span><br>DIFERENTE?">
+      READY TO SEE<br>THE <span class="lime">GAME</span><br>DIFFERENTLY?
+    </span>
+  </h2>
+  <p class="final-cta-sub" data-en="Join fans, fantasy players and coaches who watch NFL smarter." data-es="Únete a los aficionados, fantasy players y coaches que ven la NFL de forma más inteligente.">Join fans, fantasy players and coaches who watch NFL smarter.</p>
+  <a href="YOUR_APP_URL" class="btn-primary" style="font-size:17px;padding:16px 40px;" data-en="🚀 Start for free" data-es="🚀 Empezar gratis">🚀 Start for free</a>
+</section>
+
+<!-- FOOTER -->
+<footer>
+  <div class="footer-logo">PlayIQ Pro</div>
+  <div class="footer-copy" data-en="© 2025 PlayIQ Pro. NFL data powered by nfl-data-py." data-es="© 2025 PlayIQ Pro. Datos NFL con nfl-data-py.">© 2025 PlayIQ Pro. NFL data powered by nfl-data-py.</div>
+</footer>
+
+<script>
+  const APP_URL = 'YOUR_APP_URL';
+
+  function setLang(lang) {
+    document.querySelectorAll('[data-en]').forEach(el => {
+      el.innerHTML = el.getAttribute(`data-${lang}`);
+    });
+    document.getElementById('btn-en').classList.toggle('active', lang === 'en');
+    document.getElementById('btn-es').classList.toggle('active', lang === 'es');
+    document.documentElement.lang = lang;
+  }
+
+  // Scroll animations
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach(entry => {
+      if (entry.isIntersecting) {
+        entry.target.style.opacity = '1';
+        entry.target.style.transform = 'translateY(0)';
+      }
+    });
+  }, { threshold: 0.1 });
+
+  document.querySelectorAll('.feature-card, .audience-card, .pricing-card').forEach(el => {
+    el.style.opacity = '0';
+    el.style.transform = 'translateY(20px)';
+    el.style.transition = 'opacity 0.5s ease, transform 0.5s ease';
+    observer.observe(el);
+  });
+</script>
+</body>
+</html>

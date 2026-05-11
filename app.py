@@ -11,6 +11,8 @@ st.set_page_config(
     layout="wide"
 )
 
+load_data()  # pre-warm cache before auth gate
+
 user = require_auth()
 check_and_handle_payment()
 
@@ -24,6 +26,13 @@ with col2:
 with col3:
     if st.button("Salir", use_container_width=True):
         logout()
+
+if user.get("email") == "samuel.ramos.tr12@gmail.com":
+    with st.expander("⚙ Admin", expanded=False):
+        st.caption("Cache management")
+        if st.button("🗑 Clear data cache", key="admin_clear_cache"):
+            st.cache_data.clear()
+            st.success("Cache cleared — data will reload on next interaction.")
 
 st.divider()
 

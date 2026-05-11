@@ -5,4 +5,5 @@ __pycache__/
 .venv/
 data/raw/
 *.csv
+!data/processed/nfl_plays_slim.csv
 *.parquet
