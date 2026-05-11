@@ -114,7 +114,27 @@ def _render_login_screen():
         st.divider()
         st.markdown("Analiza jugadas, tendencias y estrategias con IA táctica.")
         st.markdown("")
-        if st.button("Continuar con Google", type="primary", use_container_width=True):
-            login()
+        
+        # Generar URL de Google directamente
+        flow = get_google_flow()
+        code_verifier  = _generate_code_verifier()
+        code_challenge = _generate_code_challenge(code_verifier)
+        state_value    = f"{code_verifier}|"
+        
+        auth_url, _ = flow.authorization_url(
+            access_type="offline",
+            include_granted_scopes="true",
+            code_challenge=code_challenge,
+            code_challenge_method="S256",
+            state=state_value
+        )
+        
+        st.link_button(
+            "Continuar con Google",
+            auth_url,
+            use_container_width=True,
+            type="primary"
+        )
+        
         st.markdown("")
         st.caption("Free: 5 consultas AI/día · Pro $12/mes: acceso completo")
