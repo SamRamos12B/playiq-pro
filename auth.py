@@ -56,10 +56,8 @@ def login():
         code_challenge_method="S256",
         state=state_value
     )
-    
-    # DEBUG TEMPORAL
-    st.write("Auth URL generada:")
-    st.code(auth_url)
+    st.markdown(f'<meta http-equiv="refresh" content="0; url={auth_url}">',
+                unsafe_allow_html=True)
     st.stop()
 
 def handle_callback(code: str):
