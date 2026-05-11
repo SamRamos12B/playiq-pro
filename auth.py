@@ -43,6 +43,7 @@ def _generate_code_challenge(verifier):
     return base64.urlsafe_b64encode(digest).rstrip(b'=').decode()
 
 def login():
+    import streamlit as st
     flow = get_google_flow()
     code_verifier  = _generate_code_verifier()
     code_challenge = _generate_code_challenge(code_verifier)
