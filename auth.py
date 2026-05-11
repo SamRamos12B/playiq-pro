@@ -8,14 +8,14 @@ def get_supabase():
     )
 
 def require_auth():
-    if not st.experimental_user.is_logged_in:
+    if not st.user.is_logged_in:
         _render_login_screen()
         st.stop()
 
     # Upsert en Supabase
-    user_email = st.experimental_user.email
-    user_name  = st.experimental_user.name
-    user_pic   = st.experimental_user.picture
+    user_email = st.user.email
+    user_name  = st.user.name
+    user_pic   = st.user.picture
 
     supabase = get_supabase()
     result = supabase.table("users").upsert({
