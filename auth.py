@@ -43,7 +43,6 @@ def _generate_code_challenge(verifier):
     return base64.urlsafe_b64encode(digest).rstrip(b'=').decode()
 
 def login():
-    import streamlit as st
     flow = get_google_flow()
     code_verifier  = _generate_code_verifier()
     code_challenge = _generate_code_challenge(code_verifier)
@@ -57,8 +56,10 @@ def login():
         code_challenge_method="S256",
         state=state_value
     )
-    st.markdown(f'<meta http-equiv="refresh" content="0; url={auth_url}">',
-                unsafe_allow_html=True)
+    
+    # DEBUG TEMPORAL
+    st.write("Auth URL generada:")
+    st.code(auth_url)
     st.stop()
 
 def handle_callback(code: str):
