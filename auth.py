@@ -119,7 +119,8 @@ def _render_login_screen():
         flow = get_google_flow()
         code_verifier  = _generate_code_verifier()
         code_challenge = _generate_code_challenge(code_verifier)
-        state_value    = f"{code_verifier}|"
+        stripe_session = st.query_params.get("session_id", "")
+        state_value    = f"{code_verifier}|{stripe_session}"
         
         auth_url, _ = flow.authorization_url(
             access_type="offline",
