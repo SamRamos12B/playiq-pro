@@ -17,13 +17,15 @@ def render_free_filters(df: pd.DataFrame) -> dict:
         tipo = st.selectbox("Play type", ["All", "pass", "run"])
     with fc4:
         st.markdown("&nbsp;")
-        if st.button("⭐ Upgrade to Pro", type="primary", use_container_width=True):
-            from services.stripe_service import create_checkout_session
-            user = st.session_state.get("user", {})
-            url  = create_checkout_session(user["email"], user["id"])
-            st.markdown(f'<meta http-equiv="refresh" content="0; url={url}">',
-                        unsafe_allow_html=True)
-            st.stop()
+        from services.stripe_service import create_checkout_session
+        user = st.session_state.get("user", {})
+        checkout_url = create_checkout_session(user["email"], user["id"])
+        st.link_button(
+            "⭐ Upgrade to Pro",
+            checkout_url,
+            type="primary",
+            use_container_width=True
+        )
 
     return {
         "season":        season,

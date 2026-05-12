@@ -29,12 +29,14 @@ def require_pro(feature_name: str = "esta función"):
             st.warning(f"🔒 **{feature_name}** es exclusivo de PlayIQ Pro")
             st.caption("Acceso completo por $12/mes · Cancela cuando quieras")
         with col2:
-            if st.button("⭐ Upgrade a Pro", type="primary", use_container_width=True):
-                url = create_checkout_session(
-                    user["email"],
-                    user["id"]
-                )
-                st.markdown(f'<meta http-equiv="refresh" content="0; url={url}">',
-                           unsafe_allow_html=True)
-                st.stop()
+            checkout_url = create_checkout_session(
+                user["email"],
+                user["id"]
+            )
+            st.link_button(
+                "⭐ Upgrade a Pro",
+                checkout_url,
+                type="primary",
+                use_container_width=True
+            )
         st.stop()
