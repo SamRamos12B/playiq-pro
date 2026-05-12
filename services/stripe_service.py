@@ -6,12 +6,10 @@ def get_stripe():
     return stripe
 
 def create_checkout_session(user_email: str, user_id: str) -> str:
-    """
-    Crea una sesión de pago en Stripe y devuelve la URL.
-    El usuario es redirigido a esa URL para pagar.
-    """
     s = get_stripe()
-    
+
+    base_url = st.secrets.get("APP_URL", "http://localhost:8501")
+
     session = s.checkout.Session.create(
         payment_method_types=["card"],
         line_items=[{
@@ -20,9 +18,9 @@ def create_checkout_session(user_email: str, user_id: str) -> str:
         }],
         mode="subscription",
         customer_email=user_email,
-        client_reference_id=user_id,      # ← tu ID de Supabase
-        success_url="http://localhost:8501/?session_id={CHECKOUT_SESSION_ID}",
-        cancel_url="http://localhost:8501/",
+        client_reference_id=user_id,
+        success_url=f"{base_url}/?session_id={{CHECKOUT_SESSION_ID}}",
+        cancel_url=f"{base_url}/",
     )
     return session.url
 
