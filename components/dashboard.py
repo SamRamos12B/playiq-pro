@@ -40,6 +40,7 @@ TEAM_NAMES = {
     "PIT": "Pittsburgh Steelers", "SEA": "Seattle Seahawks",
     "SF":  "San Francisco 49ers", "TB":  "Tampa Bay Buccaneers",
     "TEN": "Tennessee Titans",    "WAS": "Washington Commanders",
+    "LA":  "LA Rams",
 }
 CONCEPT_COLORS = {
     "Four Verticals": "#3B82F6", "Slant": "#6366F1",

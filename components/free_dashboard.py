@@ -20,6 +20,7 @@ TEAM_NAMES = {
     "PIT": "Pittsburgh Steelers", "SEA": "Seattle Seahawks",
     "SF":  "San Francisco 49ers", "TB":  "Tampa Bay Buccaneers",
     "TEN": "Tennessee Titans",    "WAS": "Washington Commanders",
+    "LA":  "LA Rams",
 }
 
 def render_free_filters(df: pd.DataFrame) -> dict:
