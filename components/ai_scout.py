@@ -29,8 +29,8 @@ def render_ai_scout(filtros: dict, df):
     if "scout_messages" not in st.session_state:
         st.session_state.scout_messages = []
 
-    # Mostrar historial (más recientes arriba)
-    for msg in reversed(st.session_state.scout_messages):
+    # Mostrar historial
+    for msg in st.session_state.scout_messages:
         with st.chat_message(msg["role"]):
             st.markdown(msg["content"])
 
@@ -61,6 +61,7 @@ def render_ai_scout(filtros: dict, df):
             "role": "assistant",
             "content": response
         })
+        st.rerun()
 
     # Botón para limpiar historial
     if st.session_state.scout_messages:
