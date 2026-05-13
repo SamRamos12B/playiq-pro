@@ -64,6 +64,15 @@ def render_free_filters(df: pd.DataFrame) -> dict:
 
 
 def render_free_dashboard(filtered_df: pd.DataFrame):
+    st.markdown("""
+<style>
+[data-testid="stDataFrame"] {
+    touch-action: pan-x pan-y;
+    -webkit-overflow-scrolling: touch;
+}
+</style>
+""", unsafe_allow_html=True)
+
     if filtered_df.empty:
         st.warning("No data for the current filters.")
         return
