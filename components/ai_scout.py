@@ -30,7 +30,8 @@ def render_ai_scout(filtros: dict, df):
         st.session_state.scout_messages = []
 
     # Historial con scroll propio
-    with st.container(height=400):
+    chat_box = st.container(height=400)
+    with chat_box:
         if not st.session_state.scout_messages:
             with st.chat_message("assistant"):
                 st.markdown("¡Hola! Soy el AI Scout 🏈 Pregúntame sobre las jugadas que ves en pantalla. Por ejemplo: *¿Qué concepto funciona mejor contra Cover 3?*")
@@ -38,29 +39,29 @@ def render_ai_scout(filtros: dict, df):
             with st.chat_message(msg["role"]):
                 st.markdown(msg["content"])
 
-    # Input del usuario
+    # Input fuera del container
     if prompt := st.chat_input("Pregunta sobre las jugadas actuales..."):
-        
+
         # Verificar quota antes de procesar
         if not is_pro:
             if not _check_and_update_quota(user):
                 st.warning("🔒 Sin consultas disponibles. Upgrade a Pro.")
                 return
 
-        # Mostrar mensaje del usuario
-        with st.chat_message("user"):
-            st.markdown(prompt)
         st.session_state.scout_messages.append({
-            "role": "user", 
+            "role": "user",
             "content": prompt
         })
 
-        # Generar respuesta
-        with st.chat_message("assistant"):
-            with st.spinner("Analizando..."):
-                response = _get_scout_response(prompt, filtros, df)
-            st.markdown(response)
-        
+        # Spinner y respuesta dentro del mismo chat_box
+        with chat_box:
+            with st.chat_message("user"):
+                st.markdown(prompt)
+            with st.chat_message("assistant"):
+                with st.spinner("Analizando..."):
+                    response = _get_scout_response(prompt, filtros, df)
+                st.markdown(response)
+
         st.session_state.scout_messages.append({
             "role": "assistant",
             "content": response

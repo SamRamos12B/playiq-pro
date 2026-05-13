@@ -23,6 +23,24 @@ SORT_OPTIONS = {
     "Most Yards":   ("yards_gained", False),
     "Fewest Yards": ("yards_gained", True),
 }
+TEAM_NAMES = {
+    "ARI": "Arizona Cardinals",   "ATL": "Atlanta Falcons",
+    "BAL": "Baltimore Ravens",    "BUF": "Buffalo Bills",
+    "CAR": "Carolina Panthers",   "CHI": "Chicago Bears",
+    "CIN": "Cincinnati Bengals",  "CLE": "Cleveland Browns",
+    "DAL": "Dallas Cowboys",      "DEN": "Denver Broncos",
+    "DET": "Detroit Lions",       "GB":  "Green Bay Packers",
+    "HOU": "Houston Texans",      "IND": "Indianapolis Colts",
+    "JAX": "Jacksonville Jaguars","KC":  "Kansas City Chiefs",
+    "LAC": "LA Chargers",         "LAR": "LA Rams",
+    "LV":  "Las Vegas Raiders",   "MIA": "Miami Dolphins",
+    "MIN": "Minnesota Vikings",   "NE":  "New England Patriots",
+    "NO":  "New Orleans Saints",  "NYG": "NY Giants",
+    "NYJ": "NY Jets",             "PHI": "Philadelphia Eagles",
+    "PIT": "Pittsburgh Steelers", "SEA": "Seattle Seahawks",
+    "SF":  "San Francisco 49ers", "TB":  "Tampa Bay Buccaneers",
+    "TEN": "Tennessee Titans",    "WAS": "Washington Commanders",
+}
 CONCEPT_COLORS = {
     "Four Verticals": "#3B82F6", "Slant": "#6366F1",
     "Crosser": "#8B5CF6",        "Mesh": "#A855F7",
@@ -138,7 +156,8 @@ def render_filters(df: pd.DataFrame) -> dict:
         with fc1:
             sel_team = st.multiselect(
                 "Team", sorted(df["posteam"].dropna().unique().tolist()),
-                default=[], key="sel_team")
+                default=[], key="sel_team",
+                format_func=lambda x: TEAM_NAMES.get(x, x))
         with fc2:
             sel_downs = st.multiselect("Down", [1,2,3,4], default=[], key="sel_downs")
         with fc3:
