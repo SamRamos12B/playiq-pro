@@ -29,10 +29,14 @@ def render_ai_scout(filtros: dict, df):
     if "scout_messages" not in st.session_state:
         st.session_state.scout_messages = []
 
-    # Mostrar historial
-    for msg in st.session_state.scout_messages:
-        with st.chat_message(msg["role"]):
-            st.markdown(msg["content"])
+    # Historial con scroll propio
+    with st.container(height=400):
+        if not st.session_state.scout_messages:
+            with st.chat_message("assistant"):
+                st.markdown("¡Hola! Soy el AI Scout 🏈 Pregúntame sobre las jugadas que ves en pantalla. Por ejemplo: *¿Qué concepto funciona mejor contra Cover 3?*")
+        for msg in st.session_state.scout_messages:
+            with st.chat_message(msg["role"]):
+                st.markdown(msg["content"])
 
     # Input del usuario
     if prompt := st.chat_input("Pregunta sobre las jugadas actuales..."):
