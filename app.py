@@ -28,7 +28,7 @@ with col3:
     if st.button("Salir", use_container_width=True):
         logout()
 
-if user.get("email") == "samuel.ramos.tr12@gmail.com":
+if user.get("email") == st.secrets.get("ADMIN_EMAIL"):
     with st.expander("⚙ Admin", expanded=False):
         st.caption("Cache management")
         if st.button("🗑 Clear data cache", key="admin_clear_cache"):
