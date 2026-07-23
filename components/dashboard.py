@@ -180,9 +180,10 @@ def render_filters(df: pd.DataFrame) -> dict:
     with st.expander("⚙ More filters", expanded=False):
         mc1, mc2, mc3 = st.columns(3)
         with mc1:
-            sel_defteam = st.selectbox(
-                "Opponent", ["All"] + sorted(df["defteam"].dropna().unique().tolist()),
-                key="sel_defteam")
+            sel_defteam = st.multiselect(
+                "Opponent", sorted(df["defteam"].dropna().unique().tolist()),
+                default=[], key="sel_defteam",
+                format_func=lambda x: TEAM_NAMES.get(x, x))
             sel_def_formation = st.selectbox(
                 "Defensive Formation",
                 ["All"] + sorted(df["def_formation"].dropna().unique().tolist()),

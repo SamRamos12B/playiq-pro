@@ -42,8 +42,12 @@ def filter_data(
         filtered = filtered[filtered["season"].isin(seasons)]
     if weeks:
         filtered = filtered[filtered["week"].isin(weeks)]
-    if defteam and defteam != "All":
-        filtered = filtered[filtered["defteam"] == defteam]
+    if defteam:
+        # defteam puede ser un str legado ("All"/código) o una lista de códigos
+        defteam_list = [defteam] if isinstance(defteam, str) else list(defteam)
+        defteam_list = [t for t in defteam_list if t and t != "All"]
+        if defteam_list:
+            filtered = filtered[filtered["defteam"].isin(defteam_list)]
     if def_formation and def_formation != "All":
         filtered = filtered[filtered["def_formation"] == def_formation]
 
